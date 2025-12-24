@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import API from "@/services/api";
+import { getMyOrders } from "@/services/order";
+import type { Order as OrderType } from "@/services/types/order";
 import {
   User,
   MapPin,
@@ -57,8 +60,10 @@ export default function AccountPage() {
 
   const [user, setUser] = useState<UserType | null>(null);
   const [loading, setLoading] = useState(true);
+  const [orders, setOrders] = useState<OrderType[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    "dashboard" | "profile" | "addresses" | "security" | "orders" | "wishlist"
+    "dashboard" | "profile" | "addresses" | "security" | "orders"
   >("dashboard");
 
   /* ---------- Profile ---------- */
@@ -113,14 +118,37 @@ export default function AccountPage() {
     fetchUser();
   }, [router]);
 
+  /* ================= FETCH ORDERS ================= */
+
+  useEffect(() => {
+    if (activeTab !== "orders") return;
+
+    const fetchOrders = async () => {
+      setOrdersLoading(true);
+      try {
+        const ordersData = await getMyOrders();
+        setOrders(ordersData);
+      } catch (error) {
+        console.error("Failed to fetch orders:", error);
+        setOrders([]);
+      } finally {
+        setOrdersLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, [activeTab]);
+
   /* ================= LOADING STATE ================= */
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-blue-600"></div>
-          <p className="mt-4 text-gray-600">Loading your account...</p>
+          <div className="inline-block animate-spin rounded-full h-14 w-14 border-4 border-background-tertiary border-t-brand"></div>
+          <p className="mt-6 text-lg text-muted font-medium">
+            Loading your account...
+          </p>
         </div>
       </div>
     );
@@ -139,8 +167,13 @@ export default function AccountPage() {
       // Show success message
       const successMsg = document.createElement("div");
       successMsg.className =
-        "fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50";
-      successMsg.textContent = "Profile updated successfully!";
+        "fixed top-6 right-6 bg-gradient-to-r from-accent-green to-emerald-500 text-white px-6 py-4 rounded-xl shadow-2xl z-[100] flex items-center gap-3";
+      successMsg.innerHTML = `
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+        </svg>
+        <span class="font-semibold">Profile updated successfully!</span>
+      `;
       document.body.appendChild(successMsg);
       setTimeout(() => successMsg.remove(), 3000);
     } catch {
@@ -178,15 +211,30 @@ export default function AccountPage() {
         ? await API.put(`/users/address/${editingAddress._id}`, payload)
         : await API.post("/users/address", payload);
 
-      setUser(res.data.user ?? res.data);
+      // Handle response shape properly
+      if (res.data.user) {
+        setUser(res.data.user);
+      } else if (res.data.addresses) {
+        setUser({ ...user, addresses: res.data.addresses });
+      } else {
+        // Re-fetch user data to ensure consistency
+        const userRes = await API.get("/users/me");
+        setUser(userRes.data.user ?? userRes.data);
+      }
+
       resetAddressForm();
 
       const successMsg = document.createElement("div");
       successMsg.className =
-        "fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50";
-      successMsg.textContent = editingAddress
-        ? "Address updated!"
-        : "Address added!";
+        "fixed top-6 right-6 bg-gradient-to-r from-accent-green to-emerald-500 text-white px-6 py-4 rounded-xl shadow-2xl z-[100] flex items-center gap-3";
+      successMsg.innerHTML = `
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+        </svg>
+        <span class="font-semibold">${
+          editingAddress ? "Address updated!" : "Address added!"
+        }</span>
+      `;
       document.body.appendChild(successMsg);
       setTimeout(() => successMsg.remove(), 3000);
     } catch {
@@ -239,8 +287,13 @@ export default function AccountPage() {
       // Show success message
       const successMsg = document.createElement("div");
       successMsg.className =
-        "fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50";
-      successMsg.textContent = "Password updated successfully!";
+        "fixed top-6 right-6 bg-gradient-to-r from-accent-green to-emerald-500 text-white px-6 py-4 rounded-xl shadow-2xl z-[100] flex items-center gap-3";
+      successMsg.innerHTML = `
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+        </svg>
+        <span class="font-semibold">Password updated successfully!</span>
+      `;
       document.body.appendChild(successMsg);
       setTimeout(() => successMsg.remove(), 3000);
 
@@ -273,22 +326,26 @@ export default function AccountPage() {
     icon: React.ElementType;
     count?: number;
   }) => (
-    <button
+    <motion.button
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
       onClick={() => setActiveTab(id)}
-      className={`flex items-center justify-between w-full px-4 py-3 rounded-xl text-sm transition-all duration-200 ${
+      className={`flex items-center justify-between w-full px-5 py-4 rounded-xl text-base transition-all duration-200 ${
         activeTab === id
-          ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md"
-          : "text-gray-700 hover:bg-gray-100 hover:shadow-sm"
+          ? "bg-gradient-to-r from-brand to-orange-500 text-white shadow-lg"
+          : "text-secondary hover:bg-background-tertiary hover:text-primary"
       }`}
     >
       <div className="flex items-center gap-3">
         <Icon className="w-5 h-5" />
-        <span className="font-medium">{label}</span>
+        <span className="font-semibold">{label}</span>
       </div>
       {count !== undefined && (
         <span
-          className={`px-2 py-1 rounded-full text-xs ${
-            activeTab === id ? "bg-white/20" : "bg-gray-200"
+          className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+            activeTab === id
+              ? "bg-white/20"
+              : "bg-background-tertiary text-muted"
           }`}
         >
           {count}
@@ -299,27 +356,31 @@ export default function AccountPage() {
           activeTab === id ? "opacity-100" : "opacity-0"
         }`}
       />
-    </button>
+    </motion.button>
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50/30">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="min-h-screen bg-background"
+    >
       {/* HEADER */}
-      <div className="bg-white shadow-sm border-b">
+      <div className="bg-background-secondary border-b border-theme">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">My Account</h1>
-              <p className="text-gray-600 mt-2">
+              <h1 className="text-3xl font-bold text-primary">My Account</h1>
+              <p className="text-muted mt-3">
                 Manage your profile, orders, and preferences
               </p>
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right hidden md:block">
-                <p className="font-medium text-gray-900">{user.name}</p>
-                <p className="text-sm text-gray-500">{user.email}</p>
+                <p className="font-medium text-primary">{user.name}</p>
+                <p className="text-sm text-muted">{user.email}</p>
               </div>
-              <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-lg">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-r from-brand to-orange-500 flex items-center justify-center text-white font-bold text-lg">
                 {user?.name?.charAt(0)?.toUpperCase() || "U"}
               </div>
             </div>
@@ -332,7 +393,7 @@ export default function AccountPage() {
         <div className="grid lg:grid-cols-4 gap-8">
           {/* SIDEBAR */}
           <aside className="space-y-3">
-            <div className="bg-white rounded-2xl shadow-sm border p-4 space-y-2">
+            <div className="bg-background-secondary rounded-2xl border border-theme p-4 space-y-2">
               <SidebarItem id="dashboard" label="Dashboard" icon={Home} />
               <SidebarItem id="profile" label="Profile" icon={User} />
               <SidebarItem
@@ -342,56 +403,61 @@ export default function AccountPage() {
                 count={user.addresses.length}
               />
               <SidebarItem id="orders" label="Orders" icon={Package} />
-              <SidebarItem id="wishlist" label="Wishlist" icon={Heart} />
               <SidebarItem id="security" label="Security" icon={Shield} />
             </div>
 
-            <div className="bg-white rounded-2xl shadow-sm border p-4">
-              <button
+            <div className="bg-background-secondary rounded-2xl border border-theme p-4">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={logout}
-                className="flex items-center justify-center gap-2 w-full text-red-600 hover:text-red-700 px-4 py-3 rounded-lg hover:bg-red-50 transition-colors"
+                className="flex items-center justify-center gap-2 w-full text-red-500 hover:text-red-600 px-4 py-3 rounded-lg hover:bg-red-500/10 transition-colors font-semibold"
               >
                 <LogOut className="w-5 h-5" />
-                <span className="font-medium">Logout</span>
-              </button>
+                <span>Logout</span>
+              </motion.button>
             </div>
           </aside>
 
           {/* MAIN PANEL */}
           <main className="lg:col-span-3">
-            <div className="bg-white rounded-2xl shadow-sm border p-6 md:p-8">
+            <div className="bg-background-secondary rounded-2xl border border-theme p-6 md:p-8">
               {/* DASHBOARD TAB */}
               {activeTab === "dashboard" && (
-                <div className="space-y-8">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="space-y-8"
+                >
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    <h2 className="text-2xl font-bold text-primary mb-3">
                       Welcome back, {user.name} 👋
                     </h2>
-                    <p className="text-gray-600">
+                    <p className="text-muted text-lg">
                       Here's an overview of your account
                     </p>
                   </div>
 
                   {/* Stats Grid */}
                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-6">
+                    <div className="bg-background-tertiary border border-theme rounded-2xl p-6 hover:border-brand/30 transition-colors">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
-                          <Mail className="w-6 h-6 text-blue-600" />
+                        <div className="w-12 h-12 rounded-full bg-accent-blue/10 flex items-center justify-center">
+                          <Mail className="w-6 h-6 text-accent-blue" />
                         </div>
                         <div>
-                          <p className="text-sm text-gray-600">Email</p>
-                          <p className="font-semibold text-gray-900 truncate">
+                          <p className="text-sm text-muted">Email</p>
+                          <p className="font-semibold text-primary truncate">
                             {user.email}
                           </p>
                         </div>
                       </div>
                       <div className="mt-4">
                         <span
-                          className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${
+                          className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
                             user.emailVerified
-                              ? "bg-green-100 text-green-800"
-                              : "bg-yellow-100 text-yellow-800"
+                              ? "bg-accent-green/10 text-accent-green"
+                              : "bg-brand/10 text-brand"
                           }`}
                         >
                           {user.emailVerified ? (
@@ -406,14 +472,14 @@ export default function AccountPage() {
                       </div>
                     </div>
 
-                    <div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-100 rounded-xl p-6">
+                    <div className="bg-background-tertiary border border-theme rounded-2xl p-6 hover:border-purple-500/30 transition-colors">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
-                          <Calendar className="w-6 h-6 text-purple-600" />
+                        <div className="w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center">
+                          <Calendar className="w-6 h-6 text-purple-500" />
                         </div>
                         <div>
-                          <p className="text-sm text-gray-600">Member Since</p>
-                          <p className="font-semibold text-gray-900">
+                          <p className="text-sm text-muted">Member Since</p>
+                          <p className="font-semibold text-primary">
                             {new Date(user.createdAt).toLocaleDateString(
                               "en-US",
                               {
@@ -426,16 +492,14 @@ export default function AccountPage() {
                       </div>
                     </div>
 
-                    <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100 rounded-xl p-6">
+                    <div className="bg-background-tertiary border border-theme rounded-2xl p-6 hover:border-accent-green/30 transition-colors">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
-                          <MapPin className="w-6 h-6 text-emerald-600" />
+                        <div className="w-12 h-12 rounded-full bg-accent-green/10 flex items-center justify-center">
+                          <MapPin className="w-6 h-6 text-accent-green" />
                         </div>
                         <div>
-                          <p className="text-sm text-gray-600">
-                            Saved Addresses
-                          </p>
-                          <p className="font-semibold text-gray-900 text-2xl">
+                          <p className="text-sm text-muted">Saved Addresses</p>
+                          <p className="font-semibold text-primary text-2xl">
                             {user.addresses.length}
                           </p>
                         </div>
@@ -445,122 +509,132 @@ export default function AccountPage() {
 
                   {/* Quick Actions */}
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    <h3 className="text-lg font-semibold text-primary mb-6">
                       Quick Actions
                     </h3>
                     <div className="grid sm:grid-cols-2 gap-4">
-                      <button
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
                         onClick={() => setActiveTab("profile")}
-                        className="flex items-center gap-4 p-4 border rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all group"
+                        className="flex items-center gap-4 p-5 rounded-2xl border border-theme hover:border-accent-blue transition-all group bg-background-tertiary"
                       >
-                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center group-hover:bg-blue-200">
-                          <Edit2 className="w-5 h-5 text-blue-600" />
+                        <div className="w-10 h-10 rounded-full bg-accent-blue/10 flex items-center justify-center group-hover:bg-accent-blue/20 transition-colors">
+                          <Edit2 className="w-5 h-5 text-accent-blue" />
                         </div>
                         <div className="text-left">
-                          <p className="font-medium text-gray-900">
+                          <p className="font-medium text-primary">
                             Update Profile
                           </p>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-muted">
                             Edit your personal information
                           </p>
                         </div>
-                      </button>
+                      </motion.button>
 
-                      <button
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
                         onClick={() => setActiveTab("security")}
-                        className="flex items-center gap-4 p-4 border rounded-xl hover:border-green-300 hover:bg-green-50 transition-all group"
+                        className="flex items-center gap-4 p-5 rounded-2xl border border-theme hover:border-accent-green transition-all group bg-background-tertiary"
                       >
-                        <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center group-hover:bg-green-200">
-                          <Lock className="w-5 h-5 text-green-600" />
+                        <div className="w-10 h-10 rounded-full bg-accent-green/10 flex items-center justify-center group-hover:bg-accent-green/20 transition-colors">
+                          <Lock className="w-5 h-5 text-accent-green" />
                         </div>
                         <div className="text-left">
-                          <p className="font-medium text-gray-900">
+                          <p className="font-medium text-primary">
                             Change Password
                           </p>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-muted">
                             Update your security settings
                           </p>
                         </div>
-                      </button>
+                      </motion.button>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               )}
 
               {/* PROFILE TAB */}
               {activeTab === "profile" && (
-                <div className="max-w-2xl">
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="max-w-2xl"
+                >
                   <div className="mb-8">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    <h2 className="text-2xl font-bold text-primary mb-3">
                       Profile Settings
                     </h2>
-                    <p className="text-gray-600">
+                    <p className="text-muted text-lg">
                       Update your personal information and preferences
                     </p>
                   </div>
 
                   <div className="space-y-6">
-                    <div className="bg-gray-50 rounded-xl p-6">
-                      <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <div className="bg-background-tertiary rounded-2xl border border-theme p-6">
+                      <h3 className="font-semibold text-primary mb-6 flex items-center gap-3">
                         <User className="w-5 h-5" />
                         Personal Information
                       </h3>
 
-                      <div className="space-y-4">
+                      <div className="space-y-5">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-semibold text-primary mb-3">
                             Full Name
                           </label>
                           <div className="relative">
                             <input
                               value={name}
                               onChange={(e) => setName(e.target.value)}
-                              className="w-full border border-gray-300 rounded-lg px-4 py-3 pl-11 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                              className="w-full bg-background border border-theme rounded-xl px-5 py-4 pl-12 text-secondary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand transition-all"
                               placeholder="Enter your full name"
                             />
-                            <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                            <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted" />
                           </div>
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-semibold text-primary mb-3">
                             Email Address
                           </label>
                           <div className="relative">
                             <input
                               value={user.email}
                               readOnly
-                              className="w-full border border-gray-300 bg-gray-50 rounded-lg px-4 py-3 pl-11 text-gray-500"
+                              className="w-full bg-background border border-theme rounded-xl px-5 py-4 pl-12 text-muted"
                             />
-                            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                            <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted" />
                           </div>
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-semibold text-primary mb-3">
                             Phone Number
                           </label>
                           <div className="relative">
                             <input
                               value={phone}
                               onChange={(e) => setPhone(e.target.value)}
-                              className="w-full border border-gray-300 rounded-lg px-4 py-3 pl-11 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                              className="w-full bg-background border border-theme rounded-xl px-5 py-4 pl-12 text-secondary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand transition-all"
                               placeholder="+1 (555) 123-4567"
                             />
-                            <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                            <Phone className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted" />
                           </div>
                         </div>
                       </div>
 
-                      <div className="mt-6 pt-6 border-t">
-                        <button
+                      <div className="mt-6 pt-6 border-t border-theme">
+                        <motion.button
+                          whileHover={{ scale: 1.03 }}
+                          whileTap={{ scale: 0.97 }}
                           onClick={updateProfile}
                           disabled={savingProfile}
-                          className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-all shadow-md hover:shadow-lg"
+                          className="inline-flex items-center gap-3 bg-gradient-to-r from-brand to-orange-500 text-white px-7 py-4 rounded-xl font-bold text-lg hover:shadow-lg hover:shadow-brand/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                         >
                           {savingProfile ? (
                             <>
-                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                              <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
                               Saving...
                             </>
                           ) : (
@@ -569,35 +643,41 @@ export default function AccountPage() {
                               Save Changes
                             </>
                           )}
-                        </button>
+                        </motion.button>
                       </div>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               )}
 
               {/* ADDRESSES TAB */}
               {activeTab === "addresses" && (
-                <div className="space-y-8">
-                  <div className="flex justify-between items-center">
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="space-y-8"
+                >
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
-                      <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                      <h2 className="text-2xl font-bold text-primary mb-3">
                         Saved Addresses
                       </h2>
-                      <p className="text-gray-600">
+                      <p className="text-muted text-lg">
                         Manage your shipping and billing addresses
                       </p>
                     </div>
-                    <button
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       onClick={() => {
                         resetAddressForm();
                         setShowAddressForm(true);
                       }}
-                      className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-2.5 rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg"
+                      className="inline-flex items-center gap-3 bg-gradient-to-r from-brand to-orange-500 text-white px-5 py-3.5 rounded-xl font-bold hover:shadow-lg hover:shadow-brand/20"
                     >
                       <Plus className="w-5 h-5" />
                       Add New Address
-                    </button>
+                    </motion.button>
                   </div>
 
                   {/* Address Grid */}
@@ -606,52 +686,60 @@ export default function AccountPage() {
                       {user.addresses.map((addr) => (
                         <div
                           key={addr._id}
-                          className={`border rounded-xl p-6 transition-all ${
+                          className={`border rounded-2xl p-6 transition-all ${
                             addr.isDefault
-                              ? "border-blue-300 bg-blue-50/30"
-                              : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
+                              ? "border-brand bg-gradient-to-br from-background-tertiary to-background-secondary"
+                              : "border-theme hover:border-accent-blue bg-background-tertiary"
                           }`}
                         >
                           <div className="flex justify-between items-start mb-4">
                             <div className="flex items-center gap-2">
-                              <Home className="w-5 h-5 text-gray-400" />
+                              <Home
+                                className={`w-5 h-5 ${
+                                  addr.isDefault ? "text-brand" : "text-muted"
+                                }`}
+                              />
                               {addr.isDefault && (
-                                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-medium">
+                                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gradient-to-r from-brand/10 to-orange-500/10 text-brand text-xs font-bold">
                                   <CheckCircle className="w-3 h-3" />
                                   Default
                                 </span>
                               )}
                             </div>
                             <div className="flex gap-2">
-                              <button
+                              <motion.button
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
                                 onClick={() => editAddress(addr)}
-                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                className="p-2.5 text-muted hover:text-accent-blue hover:bg-accent-blue/10 rounded-lg transition-colors"
                                 title="Edit address"
                               >
                                 <Edit2 className="w-4 h-4" />
-                              </button>
-                              <button
+                              </motion.button>
+                              <motion.button
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
                                 onClick={() => deleteAddress(addr._id)}
-                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                className="p-2.5 text-muted hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
                                 title="Delete address"
                               >
                                 <Trash2 className="w-4 h-4" />
-                              </button>
+                              </motion.button>
                             </div>
                           </div>
 
-                          <p className="font-medium text-gray-900 mb-2">
+                          <p className="font-semibold text-primary text-lg mb-2">
                             {addr.street}
                           </p>
-                          <p className="text-gray-600 mb-1">
+                          <p className="text-secondary mb-1">
                             {addr.city}, {addr.zipCode}
                           </p>
-                          <p className="text-gray-600">{addr.country}</p>
+                          <p className="text-secondary">{addr.country}</p>
 
                           {!addr.isDefault && (
                             <button
                               onClick={() => setDefaultAddress(addr._id)}
-                              className="mt-4 text-sm text-blue-600 hover:text-blue-700 font-medium"
+                              className="mt-6 text-sm font-semibold text-accent-blue hover:text-[#60A5FA]"
                             >
                               Set as Default
                             </button>
@@ -660,76 +748,82 @@ export default function AccountPage() {
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-xl">
-                      <MapPin className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    <div className="text-center py-12 border-2 border-dashed border-theme rounded-2xl">
+                      <MapPin className="w-12 h-12 text-theme mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold text-primary mb-2">
                         No addresses saved
                       </h3>
-                      <p className="text-gray-600 mb-6">
+                      <p className="text-muted mb-6">
                         Add your first shipping address
                       </p>
-                      <button
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
                         onClick={() => setShowAddressForm(true)}
-                        className="inline-flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                        className="inline-flex items-center gap-3 bg-gradient-to-r from-brand to-orange-500 text-white px-5 py-3.5 rounded-xl font-bold"
                       >
                         <Plus className="w-5 h-5" />
                         Add Address
-                      </button>
+                      </motion.button>
                     </div>
                   )}
 
                   {/* Address Form */}
                   {showAddressForm && (
-                    <div className="mt-8 pt-8 border-t">
-                      <h3 className="text-xl font-semibold text-gray-900 mb-6">
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      className="mt-8 pt-8 border-t border-theme"
+                    >
+                      <h3 className="text-xl font-semibold text-primary mb-6">
                         {editingAddress ? "Edit Address" : "Add New Address"}
                       </h3>
 
-                      <div className="grid sm:grid-cols-2 gap-4">
+                      <div className="grid sm:grid-cols-2 gap-5">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-semibold text-primary mb-3">
                             Street Address
                           </label>
                           <input
                             value={street}
                             onChange={(e) => setStreet(e.target.value)}
-                            className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                            className="w-full bg-background border border-theme rounded-xl px-4 py-3.5 text-secondary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand transition-all"
                             placeholder="123 Main St"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-semibold text-primary mb-3">
                             City
                           </label>
                           <input
                             value={city}
                             onChange={(e) => setCity(e.target.value)}
-                            className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                            className="w-full bg-background border border-theme rounded-xl px-4 py-3.5 text-secondary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand transition-all"
                             placeholder="New York"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-semibold text-primary mb-3">
                             ZIP Code
                           </label>
                           <input
                             value={zipCode}
                             onChange={(e) => setZipCode(e.target.value)}
-                            className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                            className="w-full bg-background border border-theme rounded-xl px-4 py-3.5 text-secondary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand transition-all"
                             placeholder="10001"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-semibold text-primary mb-3">
                             Country
                           </label>
                           <input
                             value={country}
                             onChange={(e) => setCountry(e.target.value)}
-                            className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                            className="w-full bg-background border border-theme rounded-xl px-4 py-3.5 text-secondary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand transition-all"
                             placeholder="United States"
                           />
                         </div>
@@ -741,58 +835,66 @@ export default function AccountPage() {
                           id="defaultAddress"
                           checked={isDefault}
                           onChange={(e) => setIsDefault(e.target.checked)}
-                          className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                          className="w-5 h-5 rounded-lg border-theme bg-background text-brand focus:ring-brand focus:ring-2"
                         />
                         <label
                           htmlFor="defaultAddress"
-                          className="text-sm text-gray-700"
+                          className="text-secondary font-medium"
                         >
                           Set as default shipping address
                         </label>
                       </div>
 
-                      <div className="mt-8 flex gap-3">
-                        <button
+                      <div className="mt-8 flex gap-4">
+                        <motion.button
+                          whileHover={{ scale: 1.03 }}
+                          whileTap={{ scale: 0.97 }}
                           onClick={saveAddress}
-                          className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg"
+                          className="bg-gradient-to-r from-brand to-orange-500 text-white px-6 py-3.5 rounded-xl font-bold text-lg hover:shadow-lg hover:shadow-brand/20"
                         >
                           {editingAddress ? "Update Address" : "Save Address"}
-                        </button>
-                        <button
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.03 }}
+                          whileTap={{ scale: 0.97 }}
                           onClick={resetAddressForm}
-                          className="border border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                          className="border border-theme text-secondary px-6 py-3.5 rounded-xl font-bold text-lg hover:bg-background-tertiary transition-colors"
                         >
                           Cancel
-                        </button>
+                        </motion.button>
                       </div>
-                    </div>
+                    </motion.div>
                   )}
-                </div>
+                </motion.div>
               )}
 
               {/* SECURITY TAB */}
               {activeTab === "security" && (
-                <div className="max-w-2xl">
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="max-w-2xl"
+                >
                   <div className="mb-8">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    <h2 className="text-2xl font-bold text-primary mb-3">
                       Security Settings
                     </h2>
-                    <p className="text-gray-600">
+                    <p className="text-muted text-lg">
                       Manage your password and security preferences
                     </p>
                   </div>
 
                   <div className="space-y-8">
                     {/* Change Password Card */}
-                    <div className="bg-gray-50 rounded-xl p-6">
-                      <h3 className="font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                    <div className="bg-background-tertiary rounded-2xl border border-theme p-6">
+                      <h3 className="font-semibold text-primary mb-6 flex items-center gap-3">
                         <Lock className="w-5 h-5" />
                         Change Password
                       </h3>
 
-                      <div className="space-y-4">
+                      <div className="space-y-5">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-semibold text-primary mb-3">
                             Current Password
                           </label>
                           <div className="relative">
@@ -802,7 +904,7 @@ export default function AccountPage() {
                               onChange={(e) =>
                                 setCurrentPassword(e.target.value)
                               }
-                              className="w-full border border-gray-300 rounded-lg px-4 py-3 pr-11 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                              className="w-full bg-background border border-theme rounded-xl px-5 py-4 pr-12 text-secondary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand transition-all"
                               placeholder="Enter current password"
                             />
                             <button
@@ -813,7 +915,7 @@ export default function AccountPage() {
                                   current: !prev.current,
                                 }))
                               }
-                              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-muted hover:text-secondary"
                             >
                               {showPassword.current ? (
                                 <EyeOff className="w-5 h-5" />
@@ -825,7 +927,7 @@ export default function AccountPage() {
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-semibold text-primary mb-3">
                             New Password
                           </label>
                           <div className="relative">
@@ -833,7 +935,7 @@ export default function AccountPage() {
                               type={showPassword.new ? "text" : "password"}
                               value={newPassword}
                               onChange={(e) => setNewPassword(e.target.value)}
-                              className="w-full border border-gray-300 rounded-lg px-4 py-3 pr-11 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                              className="w-full bg-background border border-theme rounded-xl px-5 py-4 pr-12 text-secondary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand transition-all"
                               placeholder="Enter new password"
                             />
                             <button
@@ -844,7 +946,7 @@ export default function AccountPage() {
                                   new: !prev.new,
                                 }))
                               }
-                              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-muted hover:text-secondary"
                             >
                               {showPassword.new ? (
                                 <EyeOff className="w-5 h-5" />
@@ -853,13 +955,13 @@ export default function AccountPage() {
                               )}
                             </button>
                           </div>
-                          <p className="mt-1 text-xs text-gray-500">
+                          <p className="mt-3 text-sm text-muted">
                             Must be at least 6 characters long
                           </p>
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-semibold text-primary mb-3">
                             Confirm New Password
                           </label>
                           <div className="relative">
@@ -869,7 +971,7 @@ export default function AccountPage() {
                               onChange={(e) =>
                                 setConfirmPassword(e.target.value)
                               }
-                              className="w-full border border-gray-300 rounded-lg px-4 py-3 pr-11 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                              className="w-full bg-background border border-theme rounded-xl px-5 py-4 pr-12 text-secondary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand transition-all"
                               placeholder="Confirm new password"
                             />
                             <button
@@ -880,7 +982,7 @@ export default function AccountPage() {
                                   confirm: !prev.confirm,
                                 }))
                               }
-                              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-muted hover:text-secondary"
                             >
                               {showPassword.confirm ? (
                                 <EyeOff className="w-5 h-5" />
@@ -892,7 +994,9 @@ export default function AccountPage() {
                         </div>
 
                         <div className="pt-4">
-                          <button
+                          <motion.button
+                            whileHover={{ scale: 1.03 }}
+                            whileTap={{ scale: 0.97 }}
                             onClick={changePassword}
                             disabled={
                               changingPassword ||
@@ -900,11 +1004,11 @@ export default function AccountPage() {
                               !newPassword ||
                               !confirmPassword
                             }
-                            className="inline-flex items-center gap-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-lg font-medium hover:from-green-700 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg"
+                            className="inline-flex items-center gap-3 bg-gradient-to-r from-accent-green to-[#4ADE80] text-white px-7 py-4 rounded-xl font-bold text-lg hover:shadow-lg hover:shadow-accent-green/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                           >
                             {changingPassword ? (
                               <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                                <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
                                 Updating...
                               </>
                             ) : (
@@ -913,78 +1017,159 @@ export default function AccountPage() {
                                 Update Password
                               </>
                             )}
-                          </button>
+                          </motion.button>
                         </div>
                       </div>
                     </div>
 
                     {/* Security Tips */}
-                    <div className="border border-gray-200 rounded-xl p-6">
-                      <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <div className="bg-background-tertiary rounded-2xl border border-theme p-6">
+                      <h4 className="font-semibold text-primary mb-6 flex items-center gap-3">
                         <Shield className="w-5 h-5" />
                         Security Tips
                       </h4>
-                      <ul className="space-y-3 text-sm text-gray-600">
-                        <li className="flex items-start gap-2">
-                          <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                          Use a unique password that you don't use elsewhere
+                      <ul className="space-y-4">
+                        <li className="flex items-start gap-3">
+                          <CheckCircle className="w-5 h-5 text-accent-green mt-0.5 flex-shrink-0" />
+                          <span className="text-secondary">
+                            Use a unique password that you don't use elsewhere
+                          </span>
                         </li>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                          Enable two-factor authentication if available
+                        <li className="flex items-start gap-3">
+                          <CheckCircle className="w-5 h-5 text-accent-green mt-0.5 flex-shrink-0" />
+                          <span className="text-secondary">
+                            Enable two-factor authentication if available
+                          </span>
                         </li>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                          Regularly update your password every 3-6 months
+                        <li className="flex items-start gap-3">
+                          <CheckCircle className="w-5 h-5 text-accent-green mt-0.5 flex-shrink-0" />
+                          <span className="text-secondary">
+                            Regularly update your password every 3-6 months
+                          </span>
                         </li>
                       </ul>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               )}
 
               {/* ORDERS TAB */}
               {activeTab === "orders" && (
-                <div className="text-center py-12">
-                  <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    No orders yet
-                  </h3>
-                  <p className="text-gray-600 mb-6">
-                    Your order history will appear here
-                  </p>
-                  <a
-                    href="/products"
-                    className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 transition-all"
-                  >
-                    Start Shopping
-                  </a>
-                </div>
-              )}
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="space-y-6"
+                >
+                  <div>
+                    <h2 className="text-2xl font-bold text-primary mb-3">
+                      Order History
+                    </h2>
+                    <p className="text-muted text-lg">
+                      Track and manage your orders
+                    </p>
+                  </div>
 
-              {/* WISHLIST TAB */}
-              {activeTab === "wishlist" && (
-                <div className="text-center py-12">
-                  <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    Your wishlist is empty
-                  </h3>
-                  <p className="text-gray-600 mb-6">
-                    Save items you love for later
-                  </p>
-                  <a
-                    href="/products"
-                    className="inline-flex items-center gap-2 bg-gradient-to-r from-pink-600 to-rose-600 text-white px-6 py-3 rounded-lg font-medium hover:from-pink-700 hover:to-rose-700 transition-all"
-                  >
-                    <Heart className="w-5 h-5" />
-                    Browse Products
-                  </a>
-                </div>
+                  {ordersLoading ? (
+                    <div className="text-center py-12">
+                      <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-theme border-t-brand"></div>
+                      <p className="mt-4 text-muted">Loading your orders...</p>
+                    </div>
+                  ) : orders.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Package className="w-16 h-16 text-theme mx-auto mb-4" />
+                      <h3 className="text-xl font-semibold text-primary mb-2">
+                        No orders yet
+                      </h3>
+                      <p className="text-muted mb-6">
+                        Your order history will appear here
+                      </p>
+                      <motion.a
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        href="/shop"
+                        className="inline-flex items-center gap-3 bg-gradient-to-r from-brand to-orange-500 text-white px-6 py-3.5 rounded-xl font-bold"
+                      >
+                        Start Shopping
+                      </motion.a>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {orders.map((order) => (
+                        <div
+                          key={order._id}
+                          className="border border-theme rounded-2xl p-6 hover:border-brand/30 transition-colors bg-background-tertiary"
+                        >
+                          {/* HEADER */}
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                            <div>
+                              <p className="font-semibold text-primary">
+                                Order #{order._id.slice(-6).toUpperCase()}
+                              </p>
+                              <p className="text-sm text-muted">
+                                Placed on{" "}
+                                {new Date(order.createdAt).toLocaleDateString()}
+                              </p>
+                            </div>
+
+                            <div className="flex flex-col sm:items-end gap-2">
+                              <span
+                                className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${
+                                  order.orderStatus === "delivered"
+                                    ? "bg-accent-green/10 text-accent-green"
+                                    : order.orderStatus === "cancelled"
+                                    ? "bg-red-500/10 text-red-500"
+                                    : order.orderStatus === "shipped"
+                                    ? "bg-purple-500/10 text-purple-500"
+                                    : "bg-brand/10 text-brand"
+                                }`}
+                              >
+                                {order.orderStatus.charAt(0).toUpperCase() +
+                                  order.orderStatus.slice(1)}
+                              </span>
+
+                              <p className="font-bold text-primary text-lg">
+                                ₹{order.total.toFixed(2)}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* ITEMS */}
+                          {order.items.length > 0 && (
+                            <div className="pt-4 border-t border-theme">
+                              <p className="text-sm text-muted mb-2">
+                                {order.items.length} item
+                                {order.items.length > 1 ? "s" : ""} in this
+                                order
+                              </p>
+
+                              <div className="flex flex-wrap gap-2">
+                                {order.items.slice(0, 3).map((item, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="text-xs text-muted bg-background px-3 py-1 rounded-full"
+                                  >
+                                    {item.quantity}× {item.name}
+                                  </div>
+                                ))}
+
+                                {order.items.length > 3 && (
+                                  <div className="text-xs text-muted bg-background px-3 py-1 rounded-full">
+                                    +{order.items.length - 3} more
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
               )}
             </div>
           </main>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

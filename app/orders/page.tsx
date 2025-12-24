@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getMyOrders } from "@/services/order";
+import { motion } from "framer-motion";
 import {
   Package,
   Truck,
@@ -30,6 +31,11 @@ import {
   ShieldCheck,
   Zap,
   Lock,
+  Filter,
+  TrendingUp,
+  Sparkles,
+  Users,
+  Shield,
 } from "lucide-react";
 
 // Define the order type
@@ -122,34 +128,34 @@ export default function OrdersPage() {
   const getStatusConfig = (status: string) => {
     const configs = {
       placed: {
-        color: "bg-blue-100 text-blue-800",
+        color: "bg-[#38BDF8]/10 text-[#38BDF8] border border-[#38BDF8]/20",
         icon: <Clock className="w-4 h-4" />,
         label: "Order Placed",
-        bgColor: "bg-gradient-to-r from-blue-50 to-blue-100",
+        gradient: "from-[#38BDF8]/5 to-[#38BDF8]/0",
       },
       confirmed: {
-        color: "bg-yellow-100 text-yellow-800",
+        color: "bg-[#F59E0B]/10 text-[#F59E0B] border border-[#F59E0B]/20",
         icon: <CheckCircle className="w-4 h-4" />,
         label: "Confirmed",
-        bgColor: "bg-gradient-to-r from-yellow-50 to-yellow-100",
+        gradient: "from-[#F59E0B]/5 to-[#F97316]/0",
       },
       shipped: {
-        color: "bg-purple-100 text-purple-800",
+        color: "bg-[#8B5CF6]/10 text-[#8B5CF6] border border-[#8B5CF6]/20",
         icon: <Truck className="w-4 h-4" />,
         label: "Shipped",
-        bgColor: "bg-gradient-to-r from-purple-50 to-purple-100",
+        gradient: "from-[#8B5CF6]/5 to-[#8B5CF6]/0",
       },
       delivered: {
-        color: "bg-green-100 text-green-800",
+        color: "bg-[#22C55E]/10 text-[#22C55E] border border-[#22C55E]/20",
         icon: <Package className="w-4 h-4" />,
         label: "Delivered",
-        bgColor: "bg-gradient-to-r from-green-50 to-green-100",
+        gradient: "from-[#22C55E]/5 to-[#22C55E]/0",
       },
       cancelled: {
-        color: "bg-red-100 text-red-800",
+        color: "bg-[#EF4444]/10 text-[#EF4444] border border-[#EF4444]/20",
         icon: <XCircle className="w-4 h-4" />,
         label: "Cancelled",
-        bgColor: "bg-gradient-to-r from-red-50 to-red-100",
+        gradient: "from-[#EF4444]/5 to-[#EF4444]/0",
       },
     };
     return configs[status as keyof typeof configs] || configs.placed;
@@ -158,38 +164,33 @@ export default function OrdersPage() {
   const getPaymentStatusConfig = (status: string) => {
     const configs = {
       paid: {
-        color: "bg-green-100 text-green-800",
+        color: "bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-white",
         icon: <CheckCircle className="w-4 h-4" />,
         label: "Paid",
-        badgeColor: "bg-green-500",
       },
       pending: {
-        color: "bg-yellow-100 text-yellow-800",
+        color: "bg-gradient-to-r from-[#F59E0B] to-[#F97316] text-white",
         icon: <Clock className="w-4 h-4" />,
         label: "Pending",
-        badgeColor: "bg-yellow-500",
       },
       failed: {
-        color: "bg-red-100 text-red-800",
+        color: "bg-gradient-to-r from-[#EF4444] to-[#DC2626] text-white",
         icon: <XCircle className="w-4 h-4" />,
         label: "Failed",
-        badgeColor: "bg-red-500",
       },
     };
     return configs[status as keyof typeof configs] || configs.pending;
   };
 
-  // ✅ FIXED: Calculate total spent only from PAID orders
+  // Calculate totals
   const totalSpent = orders
     .filter((order) => order.paymentStatus === "paid")
     .reduce((sum, order) => sum + (order.total || 0), 0);
 
-  // ✅ FIXED: Calculate pending payments
   const pendingPayments = orders
     .filter((order) => order.paymentStatus === "pending")
     .reduce((sum, order) => sum + (order.total || 0), 0);
 
-  // ✅ FIXED: Calculate successful orders count
   const successfulOrders = orders.filter(
     (order) =>
       order.paymentStatus === "paid" && order.orderStatus !== "cancelled"
@@ -209,421 +210,525 @@ export default function OrdersPage() {
   });
 
   const handlePayNow = (order: Order) => {
-    // Implement payment logic
     console.log("Processing payment for order:", order._id);
-
-    // For now, show a mock payment modal
     const amount = order.total;
     alert(
       `Redirecting to payment gateway for ₹${amount.toLocaleString(
         "en-IN"
       )}\nOrder ID: ${order._id}`
     );
-
-    // In real implementation, you would:
-    // 1. Create payment intent with your payment gateway
-    // 2. Redirect to payment page
-    // 3. Update order status on success
   };
 
+  /* ---------------- LOADING STATE ---------------- */
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <h2 className="text-lg font-semibold text-gray-700">
-              Loading your orders...
-            </h2>
+      <div className="min-h-screen bg-background-secondary flex items-center justify-center p-6">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center"
+        >
+          <div className="mb-6 flex justify-center">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              className="relative"
+            >
+              <RefreshCw className="w-12 h-12 text-brand" />
+              <motion.div
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+                className="absolute inset-0 bg-gradient-to-r from-[#F59E0B]/20 to-[#F97316]/20 rounded-full blur-sm"
+              />
+            </motion.div>
           </div>
-        </div>
+          <h2 className="text-xl font-semibold text-primary mb-2">
+            Loading Your Orders
+          </h2>
+          <p className="text-muted">Fetching your purchase history...</p>
+        </motion.div>
       </div>
     );
   }
 
+  /* ---------------- ERROR STATE ---------------- */
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-12">
-        <div className="max-w-2xl mx-auto px-4 text-center">
-          <div className="w-24 h-24 bg-gradient-to-r from-red-100 to-pink-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <AlertCircle className="w-12 h-12 text-red-600" />
+      <div className="min-h-screen bg-background-secondary flex flex-col items-center justify-center p-6">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center max-w-md"
+        >
+          <div className="mb-6 relative">
+            <div className="w-20 h-20 mx-auto bg-background-tertiary rounded-2xl flex items-center justify-center border border-theme">
+              <AlertCircle className="w-10 h-10 text-[#EF4444]" />
+            </div>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">
-            Error Loading Orders
-          </h1>
-          <p className="text-lg text-gray-600 mb-8 max-w-md mx-auto">{error}</p>
+          <h2 className="text-2xl font-bold text-primary mb-3">
+            Unable to Load Orders
+          </h2>
+          <p className="text-muted mb-6">{error}</p>
           <div className="space-y-4">
-            <button
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={fetchOrders}
-              className="inline-flex items-center justify-center bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-4 rounded-xl font-bold hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 shadow-lg hover:shadow-xl"
+              className="w-full max-w-xs bg-gradient-to-r from-[#F59E0B] to-[#F97316] text-white font-semibold py-4 px-6 rounded-xl hover:shadow-lg transition-shadow"
             >
-              <RefreshCw className="w-5 h-5 mr-2" />
-              Try Again
-            </button>
+              <div className="flex items-center justify-center gap-3">
+                <RefreshCw className="w-5 h-5" />
+                <span>Try Again</span>
+              </div>
+            </motion.button>
             <Link
               href="/shop"
-              className="block text-sm text-blue-600 hover:text-blue-700"
+              className="block text-sm text-muted hover:text-primary transition-colors"
             >
               Continue Shopping →
             </Link>
           </div>
-        </div>
+        </motion.div>
       </div>
     );
   }
 
+  /* ---------------- EMPTY STATE ---------------- */
   if (orders.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-20">
-        <div className="max-w-2xl mx-auto px-4 text-center">
-          <div className="w-24 h-24 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <ShoppingBag className="w-12 h-12 text-blue-600" />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">
+      <div className="min-h-screen bg-background-secondary py-12 px-4">
+        <div className="max-w-2xl mx-auto text-center">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring" }}
+            className="mb-8"
+          >
+            <div className="w-24 h-24 mx-auto bg-gradient-to-br from-[#F59E0B]/20 to-[#F97316]/10 rounded-full flex items-center justify-center">
+              <ShoppingBag className="w-12 h-12 text-[#F59E0B]" />
+            </div>
+          </motion.div>
+
+          <h1 className="text-3xl font-bold text-primary mb-4">
             No Orders Yet
           </h1>
-          <p className="text-lg text-gray-600 mb-8 max-w-md mx-auto">
-            Start shopping to place your first order. Discover amazing products
-            waiting for you!
+          <p className="text-lg text-muted mb-8">
+            Start your shopping journey and discover amazing products!
           </p>
-          <div className="space-y-4">
+
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <Link
               href="/shop"
-              className="inline-flex items-center justify-center bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-4 rounded-xl font-bold hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 shadow-lg hover:shadow-xl"
+              className="inline-flex items-center gap-3 bg-gradient-to-r from-[#F59E0B] to-[#F97316] text-white font-semibold py-4 px-8 rounded-xl hover:shadow-lg hover:shadow-orange-500/25 transition-all"
             >
-              <ShoppingBag className="w-5 h-5 mr-2" />
-              Start Shopping
+              <ShoppingBag className="w-5 h-5" />
+              <span>Start Shopping</span>
             </Link>
-          </div>
+          </motion.div>
         </div>
       </div>
     );
   }
 
+  /* ---------------- MAIN CONTENT ---------------- */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+    <div className="min-h-screen bg-background-secondary">
+      <div className="max-w-7xl mx-auto p-4 md:p-6">
+        {/* Header Section */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8 md:mb-12"
+        >
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">My Orders</h1>
-              <p className="text-gray-600 mt-2">
-                Track, manage, and review your purchases
+              <h1 className="text-3xl md:text-4xl font-bold text-primary mb-2">
+                My Orders
+              </h1>
+              <p className="text-muted">
+                Track and manage all your purchases in one place
               </p>
             </div>
+
             <div className="flex items-center gap-4">
-              <button
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={fetchOrders}
-                className="flex items-center gap-2 text-gray-700 hover:text-blue-600 transition-colors"
+                className="p-3 bg-background-tertiary rounded-xl border border-theme hover:bg-background transition-colors"
+                aria-label="Refresh orders"
               >
-                <RefreshCw className="w-4 h-4" />
-                Refresh
-              </button>
-              <Link
-                href="/shop"
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 flex items-center gap-2"
+                <RefreshCw className="w-5 h-5 text-secondary" />
+              </motion.button>
+
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
-                <ShoppingBag className="w-5 h-5" />
-                Continue Shopping
-              </Link>
+                <Link
+                  href="/shop"
+                  className="inline-flex items-center gap-3 bg-gradient-to-r from-[#F59E0B] to-[#F97316] text-white font-semibold py-3 px-6 rounded-xl hover:shadow-lg hover:shadow-orange-500/25 transition-all"
+                >
+                  <ShoppingBag className="w-5 h-5" />
+                  <span>Continue Shopping</span>
+                </Link>
+              </motion.div>
             </div>
           </div>
 
-          {/* Stats - UPDATED with Payment Info */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-8">
-            <div className="bg-white rounded-xl p-6 shadow-sm border">
-              <div className="text-2xl font-bold text-gray-900">
-                {orders.length}
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="bg-background-tertiary rounded-2xl p-6 border border-theme"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-[#38BDF8]/10 rounded-lg">
+                  <Package className="w-5 h-5 text-[#38BDF8]" />
+                </div>
+                <h3 className="font-semibold text-primary">Total Orders</h3>
               </div>
-              <div className="text-sm text-gray-500">Total Orders</div>
-            </div>
+              <p className="text-3xl font-bold text-primary">{orders.length}</p>
+            </motion.div>
 
-            <div className="bg-white rounded-xl p-6 shadow-sm border">
-              <div className="text-2xl font-bold text-green-600">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="bg-background-tertiary rounded-2xl p-6 border border-theme"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-[#22C55E]/10 rounded-lg">
+                  <TrendingUp className="w-5 h-5 text-[#22C55E]" />
+                </div>
+                <h3 className="font-semibold text-primary">Total Spent</h3>
+              </div>
+              <p className="text-3xl font-bold text-primary">
                 ₹{totalSpent.toLocaleString("en-IN")}
-              </div>
-              <div className="text-sm text-gray-500">Total Spent</div>
-              <div className="text-xs text-green-500 mt-1">
+              </p>
+              <p className="text-sm text-muted mt-2">
                 {successfulOrders} successful orders
-              </div>
-            </div>
+              </p>
+            </motion.div>
 
-            <div className="bg-white rounded-xl p-6 shadow-sm border">
-              <div className="text-2xl font-bold text-yellow-600">
-                ₹{pendingPayments.toLocaleString("en-IN")}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="bg-background-tertiary rounded-2xl p-6 border border-theme"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-[#F59E0B]/10 rounded-lg">
+                  <Clock className="w-5 h-5 text-[#F59E0B]" />
+                </div>
+                <h3 className="font-semibold text-primary">Pending</h3>
               </div>
-              <div className="text-sm text-gray-500">Pending Payments</div>
-              <div className="text-xs text-yellow-500 mt-1">
+              <p className="text-3xl font-bold text-[#F59E0B]">
+                ₹{pendingPayments.toLocaleString("en-IN")}
+              </p>
+              <p className="text-sm text-muted mt-2">
                 {orders.filter((o) => o.paymentStatus === "pending").length}{" "}
                 orders
-              </div>
-            </div>
+              </p>
+            </motion.div>
 
-            <div className="bg-white rounded-xl p-6 shadow-sm border">
-              <div className="text-2xl font-bold text-purple-600">
-                {orders.filter((o) => o?.orderStatus === "shipped").length}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="bg-background-tertiary rounded-2xl p-6 border border-theme"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-[#8B5CF6]/10 rounded-lg">
+                  <Truck className="w-5 h-5 text-[#8B5CF6]" />
+                </div>
+                <h3 className="font-semibold text-primary">In Transit</h3>
               </div>
-              <div className="text-sm text-gray-500">In Transit</div>
-            </div>
-
-            <div className="bg-white rounded-xl p-6 shadow-sm border">
-              <div className="text-2xl font-bold text-blue-600">
-                {orders.filter((o) => o?.orderStatus === "delivered").length}
-              </div>
-              <div className="text-sm text-gray-500">Delivered</div>
-            </div>
+              <p className="text-3xl font-bold text-primary">
+                {orders.filter((o) => o.orderStatus === "shipped").length}
+              </p>
+              <p className="text-sm text-muted mt-2">Currently shipping</p>
+            </motion.div>
           </div>
 
-          {/* Payment Summary Alert */}
+          {/* Pending Payments Alert */}
           {pendingPayments > 0 && (
-            <div className="mt-6 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg flex items-center justify-center">
-                    <Wallet className="w-5 h-5 text-white" />
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-gradient-to-r from-[#F59E0B]/10 to-[#F97316]/5 rounded-2xl p-6 border border-[#F59E0B]/20 mb-6"
+            >
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-gradient-to-r from-[#F59E0B] to-[#F97316] rounded-xl">
+                    <Wallet className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-gray-900">
+                    <h3 className="font-bold text-primary mb-1">
                       Pending Payments: ₹
                       {pendingPayments.toLocaleString("en-IN")}
                     </h3>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-muted">
                       Complete payment for{" "}
                       {
                         orders.filter((o) => o.paymentStatus === "pending")
                           .length
                       }{" "}
-                      order(s) to continue processing
+                      order(s)
                     </p>
                   </div>
                 </div>
-                <button className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-2 rounded-lg font-semibold hover:from-orange-600 hover:to-red-600 transition-all duration-300 flex items-center gap-2">
+                <button className="bg-gradient-to-r from-[#F59E0B] to-[#F97316] text-white font-semibold py-3 px-6 rounded-xl hover:shadow-lg hover:shadow-orange-500/25 transition-all flex items-center gap-2">
                   <Zap className="w-4 h-4" />
                   Pay All Now
                 </button>
               </div>
-            </div>
+            </motion.div>
           )}
-        </div>
+        </motion.div>
 
-        {/* Filters */}
-        <div className="bg-white rounded-2xl shadow-sm border p-6 mb-8">
+        {/* Filters Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="bg-background-tertiary rounded-2xl p-6 border border-theme mb-8"
+        >
           <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
             <div className="relative flex-1 max-w-md w-full">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted" />
               <input
                 type="text"
                 placeholder="Search by order ID or product name..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
+                className="w-full pl-12 pr-4 py-3 bg-background-secondary border border-theme rounded-xl focus:border-[#F59E0B] focus:ring-2 focus:ring-[#F59E0B]/20 focus:outline-none transition-all text-primary placeholder:text-muted"
               />
             </div>
-            <div className="flex gap-3">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="border border-gray-300 rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
-              >
-                <option value="all">All Status</option>
-                <option value="placed">Order Placed</option>
-                <option value="confirmed">Confirmed</option>
-                <option value="shipped">Shipped</option>
-                <option value="delivered">Delivered</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-              <select
-                className="border border-gray-300 rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="all">All Payments</option>
-                <option value="paid">Paid Only</option>
-                <option value="pending">Pending Payment</option>
-              </select>
+
+            <div className="flex flex-wrap gap-3">
+              <div className="relative">
+                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted" />
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="pl-10 pr-4 py-3 bg-background-secondary border border-theme rounded-xl focus:border-[#F59E0B] focus:ring-2 focus:ring-[#F59E0B]/20 focus:outline-none transition-all text-primary appearance-none"
+                >
+                  <option value="all">All Status</option>
+                  <option value="placed">Order Placed</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="shipped">Shipped</option>
+                  <option value="delivered">Delivered</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Orders Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredOrders.map((order) => {
-            const statusConfig = getStatusConfig(order.orderStatus);
-            const paymentConfig = getPaymentStatusConfig(order.paymentStatus);
-            const date = new Date(order.createdAt);
+        {filteredOrders.length > 0 ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
+          >
+            {filteredOrders.map((order, index) => {
+              const statusConfig = getStatusConfig(order.orderStatus);
+              const paymentConfig = getPaymentStatusConfig(order.paymentStatus);
+              const date = new Date(order.createdAt);
 
-            return (
-              <div
-                key={order._id}
-                className={`${statusConfig.bgColor} border border-gray-200 rounded-2xl p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden group relative`}
-              >
-                {/* Payment Status Badge */}
-                <div className="absolute top-4 right-4">
-                  <div
-                    className={`${paymentConfig.badgeColor} text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1`}
-                  >
-                    {paymentConfig.icon}
-                    {paymentConfig.label}
-                  </div>
-                </div>
-
-                {/* Order Header */}
-                <div className="mb-6">
-                  <h3 className="font-bold text-gray-900 text-lg mb-2">
-                    Order #{order._id?.slice(-6).toUpperCase() || "N/A"}
-                  </h3>
-                  <div className="flex items-center gap-2 mb-3">
+              return (
+                <motion.div
+                  key={order._id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className={`bg-gradient-to-br ${statusConfig.gradient} bg-background-tertiary rounded-2xl border border-theme p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group relative`}
+                >
+                  {/* Payment Status Badge */}
+                  <div className="absolute top-4 right-4">
                     <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${statusConfig.color}`}
+                      className={`${paymentConfig.color} text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1`}
                     >
-                      {statusConfig.icon}
-                      {statusConfig.label}
+                      {paymentConfig.icon}
+                      {paymentConfig.label}
                     </span>
                   </div>
-                </div>
 
-                {/* Order Details */}
-                <div className="space-y-3 mb-6">
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Calendar className="w-4 h-4" />
-                    {date.toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <IndianRupee className="w-4 h-4" />
-                    <span className="font-bold text-gray-900">
-                      ₹{order.total?.toLocaleString("en-IN") || 0}
-                    </span>
-                  </div>
-                  {order.address?.city && (
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <MapPin className="w-4 h-4" />
-                      {order.address.city}
-                    </div>
-                  )}
-                </div>
-
-                {/* Items Preview */}
-                <div className="border-t border-gray-200 pt-4 mb-6">
-                  <h4 className="text-sm font-semibold text-gray-700 mb-2">
-                    Items
-                  </h4>
-                  <div className="space-y-2">
-                    {order.items?.slice(0, 2).map((item: any, idx: number) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between text-sm"
+                  {/* Order Header */}
+                  <div className="mb-6">
+                    <h3 className="font-bold text-primary text-lg mb-2">
+                      Order #{order._id?.slice(-8).toUpperCase()}
+                    </h3>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1 ${statusConfig.color}`}
                       >
-                        <span className="text-gray-600 truncate">
-                          {item.name}
-                        </span>
-                        <span className="font-medium">₹{item.total}</span>
-                      </div>
-                    ))}
-                    {order.items?.length > 2 && (
-                      <div className="text-sm text-gray-500">
-                        + {order.items.length - 2} more items
+                        {statusConfig.icon}
+                        {statusConfig.label}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Order Details */}
+                  <div className="space-y-3 mb-6">
+                    <div className="flex items-center gap-2 text-sm text-muted">
+                      <Calendar className="w-4 h-4" />
+                      {date.toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <IndianRupee className="w-4 h-4 text-muted" />
+                      <span className="font-bold text-primary text-lg">
+                        ₹{order.total?.toLocaleString("en-IN") || 0}
+                      </span>
+                    </div>
+                    {order.address?.city && (
+                      <div className="flex items-center gap-2 text-sm text-muted">
+                        <MapPin className="w-4 h-4" />
+                        {order.address.city}
                       </div>
                     )}
                   </div>
-                </div>
 
-                {/* Action Buttons */}
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => router.push(`/orders/${order._id}`)}
-                    className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 flex items-center justify-center gap-2"
-                  >
-                    <Eye className="w-4 h-4" />
-                    View Details
-                  </button>
-
-                  {order.paymentStatus === "pending" && (
-                    <button
-                      onClick={() => handlePayNow(order)}
-                      className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-lg font-semibold hover:from-green-600 hover:to-emerald-600 transition-all duration-300 flex items-center justify-center gap-2 animate-pulse"
-                    >
-                      <Lock className="w-4 h-4" />
-                      Pay Now
-                    </button>
-                  )}
-                </div>
-
-                {/* Payment Note */}
-                {order.paymentStatus === "pending" && (
-                  <div className="mt-3 text-xs text-yellow-600 flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    Payment pending for 24+ hours
+                  {/* Items Preview */}
+                  <div className="border-t border-theme pt-4 mb-6">
+                    <h4 className="text-sm font-semibold text-primary mb-2">
+                      Items
+                    </h4>
+                    <div className="space-y-2">
+                      {order.items
+                        ?.slice(0, 2)
+                        .map((item: any, idx: number) => (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between text-sm"
+                          >
+                            <span className="text-secondary truncate">
+                              {item.name}
+                            </span>
+                            <span className="font-medium text-primary">
+                              ₹{item.total}
+                            </span>
+                          </div>
+                        ))}
+                      {order.items?.length > 2 && (
+                        <div className="text-sm text-muted">
+                          + {order.items.length - 2} more items
+                        </div>
+                      )}
+                    </div>
                   </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
 
-        {/* Empty State for Filtered Results */}
-        {filteredOrders.length === 0 && orders.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-sm border p-12 text-center">
-            <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              No orders found
+                  {/* Action Buttons */}
+                  <div className="flex gap-3">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => router.push(`/orders/${order._id}`)}
+                      className="flex-1 bg-gradient-to-r from-[#38BDF8] to-[#60A5FA] text-white px-4 py-3 rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                    >
+                      <Eye className="w-4 h-4" />
+                      View Details
+                    </motion.button>
+
+                    {order.paymentStatus === "pending" && (
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => handlePayNow(order)}
+                        className="flex-1 bg-gradient-to-r from-[#F59E0B] to-[#F97316] text-white px-4 py-3 rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                      >
+                        <Lock className="w-4 h-4" />
+                        Pay Now
+                      </motion.button>
+                    )}
+                  </div>
+
+                  {/* Payment Note */}
+                  {order.paymentStatus === "pending" && (
+                    <div className="mt-3 text-xs text-[#F59E0B] flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      Payment pending
+                    </div>
+                  )}
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="bg-background-tertiary rounded-2xl p-12 text-center border border-theme"
+          >
+            <Search className="w-16 h-16 text-muted mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-primary mb-2">
+              No matching orders found
             </h3>
-            <p className="text-gray-600 mb-6">
-              Try adjusting your search or filter to find what you're looking
-              for.
+            <p className="text-muted mb-6">
+              Try adjusting your search or filter criteria
             </p>
             <button
               onClick={() => {
                 setSearchTerm("");
                 setStatusFilter("all");
               }}
-              className="text-blue-600 hover:text-blue-700 font-medium"
+              className="text-[#F59E0B] hover:text-[#F97316] font-medium transition-colors"
             >
               Clear all filters
             </button>
-          </div>
+          </motion.div>
         )}
 
-        {/* Payment Info Section */}
-        <div className="mt-12 grid md:grid-cols-3 gap-6">
-          <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-100">
-            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-4">
-              <ShieldCheck className="w-6 h-6 text-green-600" />
+        {/* Trust Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="mt-12 grid md:grid-cols-3 gap-6"
+        >
+          <div className="bg-background-tertiary rounded-2xl p-6 border border-theme">
+            <div className="w-12 h-12 bg-[#22C55E]/10 rounded-xl flex items-center justify-center mb-4">
+              <ShieldCheck className="w-6 h-6 text-[#22C55E]" />
             </div>
-            <h4 className="font-bold text-gray-900 mb-2">Secure Payments</h4>
-            <p className="text-sm text-gray-600">
+            <h4 className="font-bold text-primary mb-2">Secure Payments</h4>
+            <p className="text-sm text-muted">
               256-bit SSL encryption. Your payment information is always
               protected.
             </p>
           </div>
 
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
-            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
-              <CreditCard className="w-6 h-6 text-blue-600" />
+          <div className="bg-background-tertiary rounded-2xl p-6 border border-theme">
+            <div className="w-12 h-12 bg-[#38BDF8]/10 rounded-xl flex items-center justify-center mb-4">
+              <CreditCard className="w-6 h-6 text-[#38BDF8]" />
             </div>
-            <h4 className="font-bold text-gray-900 mb-2">
+            <h4 className="font-bold text-primary mb-2">
               Multiple Payment Options
             </h4>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted">
               Credit/Debit Cards, UPI, Net Banking, Wallets & EMI options
               available.
             </p>
           </div>
 
-          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-6 border border-purple-100">
-            <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-4">
-              <Headphones className="w-6 h-6 text-purple-600" />
+          <div className="bg-background-tertiary rounded-2xl p-6 border border-theme">
+            <div className="w-12 h-12 bg-[#8B5CF6]/10 rounded-xl flex items-center justify-center mb-4">
+              <Headphones className="w-6 h-6 text-[#8B5CF6]" />
             </div>
-            <h4 className="font-bold text-gray-900 mb-2">Payment Support</h4>
-            <p className="text-sm text-gray-600">
+            <h4 className="font-bold text-primary mb-2">Payment Support</h4>
+            <p className="text-sm text-muted">
               Need help with payment? Contact our 24/7 support team.
             </p>
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

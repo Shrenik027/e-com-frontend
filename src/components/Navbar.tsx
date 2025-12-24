@@ -15,9 +15,12 @@ import {
   Home,
   Package,
   Info,
-  Phone,
+  Tag,
+  Sparkles,
   LogOut,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import ThemeSwitcher from "./ThemeSwitcher"; // Import the theme switcher
 
 export default function Navbar() {
   const router = useRouter();
@@ -36,7 +39,7 @@ export default function Navbar() {
   /* ================= SCROLL EFFECT ================= */
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
+      setScrolled(window.scrollY > 10);
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
@@ -70,141 +73,170 @@ export default function Navbar() {
 
   return (
     <header
-      className={`w-full bg-white sticky top-0 z-50 transition-all duration-300 ${
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         scrolled
-          ? "shadow-lg border-b border-gray-100"
-          : "border-b border-gray-100"
+          ? "bg-background/95 backdrop-blur-md border-b border-theme shadow-lg"
+          : "bg-background border-b border-theme/50"
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 lg:h-20">
-          {/* ================= LEFT - LOGO ================= */}
-          <div className="flex items-center">
+        <div className="flex items-center justify-between h-16">
+          {/* ================= LEFT - LOGO & NAV ================= */}
+          <div className="flex items-center gap-8 lg:gap-12">
+            {/* LOGO */}
             <Link href="/" className="flex items-center">
-              <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                SHOPLY
-              </span>
+              <motion.span
+                className="text-2xl font-bold tracking-tight"
+                whileHover={{ scale: 1.05 }}
+              >
+                <span className="bg-gradient-brand bg-clip-text text-transparent">
+                  PremiumShop
+                </span>
+              </motion.span>
             </Link>
 
-            {/* ================= DESKTOP NAVIGATION ================= */}
-            <nav className="hidden lg:flex items-center ml-12 gap-1">
-              <Link
-                href="/"
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                  pathname === "/"
-                    ? "text-blue-600 bg-blue-50"
-                    : "text-gray-700 hover:text-blue-600 hover:bg-gray-50"
-                }`}
-              >
-                <Home className="w-4 h-4" />
-                Home
-              </Link>
-
-              <Link
-                href="/shop"
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                  pathname === "/shop"
-                    ? "text-blue-600 bg-blue-50"
-                    : "text-gray-700 hover:text-blue-600 hover:bg-gray-50"
-                }`}
-              >
-                <Package className="w-4 h-4" />
-                Shop
-              </Link>
-
-              <Link
-                href="/about"
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                  pathname === "/about"
-                    ? "text-blue-600 bg-blue-50"
-                    : "text-gray-700 hover:text-blue-600 hover:bg-gray-50"
-                }`}
-              >
-                <Info className="w-4 h-4" />
-                About
-              </Link>
-
-              <Link
-                href="/contact"
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                  pathname === "/contact"
-                    ? "text-blue-600 bg-blue-50"
-                    : "text-gray-700 hover:text-blue-600 hover:bg-gray-50"
-                }`}
-              >
-                <Phone className="w-4 h-4" />
-                Contact
-              </Link>
+            {/* DESKTOP NAVIGATION */}
+            <nav className="hidden lg:flex items-center gap-1">
+              {[
+                {
+                  href: "/",
+                  label: "Home",
+                  icon: <Home className="w-4 h-4" />,
+                },
+                {
+                  href: "/shop",
+                  label: "Shop",
+                  icon: <Package className="w-4 h-4" />,
+                },
+                {
+                  href: "/collections",
+                  label: "Collections",
+                  icon: <Tag className="w-4 h-4" />,
+                },
+                {
+                  href: "/new",
+                  label: "New",
+                  icon: <Sparkles className="w-4 h-4" />,
+                },
+                {
+                  href: "/about",
+                  label: "About",
+                  icon: <Info className="w-4 h-4" />,
+                },
+              ].map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="group flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all relative"
+                >
+                  <span
+                    className={`transition-colors ${
+                      pathname === item.href
+                        ? "text-primary"
+                        : "text-muted group-hover:text-secondary"
+                    }`}
+                  >
+                    {item.icon}
+                  </span>
+                  <span
+                    className={`transition-colors ${
+                      pathname === item.href
+                        ? "text-primary"
+                        : "text-muted group-hover:text-secondary"
+                    }`}
+                  >
+                    {item.label}
+                  </span>
+                  {pathname === item.href && (
+                    <motion.div
+                      layoutId="navbar-indicator"
+                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-brand rounded-full"
+                    />
+                  )}
+                </Link>
+              ))}
             </nav>
           </div>
 
-          {/* ================= RIGHT - ICONS ================= */}
-          <div className="flex items-center gap-4 lg:gap-6">
-            {/* SEARCH */}
-            <button
-              onClick={() => router.push("/search")}
-              className="p-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg transition-colors"
+          {/* ================= RIGHT - ACTIONS ================= */}
+          <div className="flex items-center gap-3 lg:gap-4">
+            {/* THEME SWITCHER */}
+            <ThemeSwitcher />
+
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => router.push("/shop")}
+              className="p-2.5 text-muted hover:text-secondary hover:bg-background-tertiary rounded-lg transition-all"
               aria-label="Search"
             >
               <Search className="w-5 h-5" />
-            </button>
+            </motion.button>
 
             {/* ACCOUNT */}
             <div className="relative" ref={dropdownRef}>
               {!isLoggedIn ? (
                 <Link
                   href="/login"
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-colors"
+                  className="hidden lg:flex items-center gap-2 px-4 py-2.5 text-muted hover:text-secondary hover:bg-background-tertiary rounded-lg font-medium transition-all"
                 >
                   <User className="w-5 h-5" />
-                  <span className="hidden lg:inline">Account</span>
+                  <span>Account</span>
                 </Link>
               ) : (
                 <>
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
                     onClick={() => setAccountOpen(!accountOpen)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-colors"
+                    className="hidden lg:flex items-center gap-2 px-4 py-2.5 text-muted hover:text-secondary hover:bg-background-tertiary rounded-lg font-medium transition-all"
                   >
                     <User className="w-5 h-5" />
-                    <span className="hidden lg:inline">Account</span>
+                    <span>Account</span>
                     <ChevronDown
-                      className={`w-4 h-4 transition-transform ${
+                      className={`w-4 h-4 transition-transform duration-200 ${
                         accountOpen ? "rotate-180" : ""
                       }`}
                     />
-                  </button>
+                  </motion.button>
 
-                  {accountOpen && (
-                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-2 animate-in fade-in slide-in-from-top-2">
-                      <Link
-                        href="/account"
-                        className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors"
-                        onClick={() => setAccountOpen(false)}
+                  <AnimatePresence>
+                    {accountOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="absolute right-0 mt-2 w-56 bg-background-tertiary rounded-xl shadow-xl border border-theme py-2 overflow-hidden"
                       >
-                        <User className="w-4 h-4" />
-                        <span className="font-medium">My Account</span>
-                      </Link>
+                        <Link
+                          href="/account"
+                          className="flex items-center gap-3 px-4 py-3 text-secondary hover:bg-background-secondary transition-colors"
+                          onClick={() => setAccountOpen(false)}
+                        >
+                          <User className="w-4 h-4" />
+                          <span className="font-medium">My Account</span>
+                        </Link>
 
-                      <Link
-                        href="/orders"
-                        className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors"
-                        onClick={() => setAccountOpen(false)}
-                      >
-                        <Package className="w-4 h-4" />
-                        <span className="font-medium">My Orders</span>
-                      </Link>
+                        <Link
+                          href="/orders"
+                          className="flex items-center gap-3 px-4 py-3 text-secondary hover:bg-background-secondary transition-colors"
+                          onClick={() => setAccountOpen(false)}
+                        >
+                          <Package className="w-4 h-4" />
+                          <span className="font-medium">My Orders</span>
+                        </Link>
 
-                      <div className="border-t border-gray-100 my-2"></div>
+                        <div className="border-t border-theme my-2" />
 
-                      <button
-                        onClick={logout}
-                        className="flex items-center gap-3 w-full px-4 py-3 text-red-600 hover:bg-red-50 transition-colors text-left"
-                      >
-                        <LogOut className="w-4 h-4" />
-                        <span className="font-medium">Logout</span>
-                      </button>
-                    </div>
-                  )}
+                        <button
+                          onClick={logout}
+                          className="flex items-center gap-3 w-full px-4 py-3 text-brand hover:bg-background-secondary transition-colors text-left"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          <span className="font-medium">Logout</span>
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </>
               )}
             </div>
@@ -212,21 +244,26 @@ export default function Navbar() {
             {/* CART */}
             <Link
               href="/cart"
-              className="relative p-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg transition-colors"
+              className="relative p-2.5 text-muted hover:text-secondary hover:bg-background-tertiary rounded-lg transition-all group"
               aria-label="Shopping Cart"
             >
               <ShoppingCart className="w-5 h-5" />
               {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full">
+                <motion.span
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="absolute -top-1.5 -right-1.5 bg-gradient-brand text-black text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full"
+                >
                   {cartCount}
-                </span>
+                </motion.span>
               )}
             </Link>
 
             {/* MOBILE MENU BUTTON */}
-            <button
+            <motion.button
+              whileTap={{ scale: 0.95 }}
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="lg:hidden p-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-lg transition-colors"
+              className="lg:hidden p-2.5 text-muted hover:text-secondary hover:bg-background-tertiary rounded-lg transition-all"
               aria-label="Menu"
             >
               {mobileOpen ? (
@@ -234,115 +271,119 @@ export default function Navbar() {
               ) : (
                 <Menu className="w-5 h-5" />
               )}
-            </button>
+            </motion.button>
           </div>
         </div>
       </div>
 
       {/* ================= MOBILE MENU ================= */}
-      {mobileOpen && (
-        <div className="lg:hidden bg-white border-t border-gray-100 animate-in fade-in slide-in-from-top-4">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <nav className="flex flex-col gap-1">
-              <Link
-                href="/"
-                onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all ${
-                  pathname === "/"
-                    ? "text-blue-600 bg-blue-50"
-                    : "text-gray-700 hover:text-blue-600 hover:bg-gray-50"
-                }`}
-              >
-                <Home className="w-4 h-4" />
-                Home
-              </Link>
-
-              <Link
-                href="/shop"
-                onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all ${
-                  pathname === "/shop"
-                    ? "text-blue-600 bg-blue-50"
-                    : "text-gray-700 hover:text-blue-600 hover:bg-gray-50"
-                }`}
-              >
-                <Package className="w-4 h-4" />
-                Shop
-              </Link>
-
-              <Link
-                href="/about"
-                onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all ${
-                  pathname === "/about"
-                    ? "text-blue-600 bg-blue-50"
-                    : "text-gray-700 hover:text-blue-600 hover:bg-gray-50"
-                }`}
-              >
-                <Info className="w-4 h-4" />
-                About
-              </Link>
-
-              <Link
-                href="/contact"
-                onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all ${
-                  pathname === "/contact"
-                    ? "text-blue-600 bg-blue-50"
-                    : "text-gray-700 hover:text-blue-600 hover:bg-gray-50"
-                }`}
-              >
-                <Phone className="w-4 h-4" />
-                Contact
-              </Link>
-
-              <div className="border-t border-gray-100 my-2"></div>
-
-              {!isLoggedIn ? (
-                <Link
-                  href="/login"
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-all"
-                >
-                  <User className="w-4 h-4" />
-                  Account / Login
-                </Link>
-              ) : (
-                <>
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="lg:hidden bg-background-secondary border-t border-theme overflow-hidden"
+          >
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+              <nav className="flex flex-col gap-1">
+                {[
+                  {
+                    href: "/",
+                    label: "Home",
+                    icon: <Home className="w-4 h-4" />,
+                  },
+                  {
+                    href: "/shop",
+                    label: "Shop",
+                    icon: <Package className="w-4 h-4" />,
+                  },
+                  {
+                    href: "/collections",
+                    label: "Collections",
+                    icon: <Tag className="w-4 h-4" />,
+                  },
+                  {
+                    href: "/new",
+                    label: "New Arrivals",
+                    icon: <Sparkles className="w-4 h-4" />,
+                  },
+                  {
+                    href: "/about",
+                    label: "About",
+                    icon: <Info className="w-4 h-4" />,
+                  },
+                ].map((item) => (
                   <Link
-                    href="/account"
+                    key={item.href}
+                    href={item.href}
                     onClick={() => setMobileOpen(false)}
-                    className="flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-all"
+                    className={`flex items-center gap-3 px-4 py-3.5 rounded-lg font-medium transition-all ${
+                      pathname === item.href
+                        ? "text-primary bg-background-tertiary"
+                        : "text-muted hover:text-secondary hover:bg-background-tertiary"
+                    }`}
+                  >
+                    {item.icon}
+                    {item.label}
+                  </Link>
+                ))}
+
+                <div className="border-t border-theme my-3" />
+
+                {/* Theme Switcher in Mobile Menu */}
+                <div className="px-4 py-3.5">
+                  <ThemeSwitcher />
+                </div>
+
+                <div className="border-t border-theme my-3" />
+
+                {!isLoggedIn ? (
+                  <Link
+                    href="/login"
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center gap-3 px-4 py-3.5 rounded-lg font-medium text-muted hover:text-secondary hover:bg-background-tertiary transition-all"
                   >
                     <User className="w-4 h-4" />
-                    My Account
+                    Account / Login
                   </Link>
+                ) : (
+                  <>
+                    <Link
+                      href="/account"
+                      onClick={() => setMobileOpen(false)}
+                      className="flex items-center gap-3 px-4 py-3.5 rounded-lg font-medium text-muted hover:text-secondary hover:bg-background-tertiary transition-all"
+                    >
+                      <User className="w-4 h-4" />
+                      My Account
+                    </Link>
 
-                  <Link
-                    href="/orders"
-                    onClick={() => setMobileOpen(false)}
-                    className="flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-all"
-                  >
-                    <Package className="w-4 h-4" />
-                    My Orders
-                  </Link>
+                    <Link
+                      href="/orders"
+                      onClick={() => setMobileOpen(false)}
+                      className="flex items-center gap-3 px-4 py-3.5 rounded-lg font-medium text-muted hover:text-secondary hover:bg-background-tertiary transition-all"
+                    >
+                      <Package className="w-4 h-4" />
+                      My Orders
+                    </Link>
 
-                  <button
-                    onClick={() => {
-                      logout();
-                      setMobileOpen(false);
-                    }}
-                    className="flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-red-600 hover:bg-red-50 transition-all text-left"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    Logout
-                  </button>
-                </>
-              )}
-            </nav>
-          </div>
-        </div>
-      )}
+                    <button
+                      onClick={() => {
+                        logout();
+                        setMobileOpen(false);
+                      }}
+                      className="flex items-center gap-3 px-4 py-3.5 rounded-lg font-medium text-brand hover:bg-background-tertiary transition-all text-left"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Logout
+                    </button>
+                  </>
+                )}
+              </nav>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 }

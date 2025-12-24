@@ -13,7 +13,10 @@ export default function RootLayout({
       <body>
         <Providers>
           <Navbar />
-          {children}
+
+          {/* ⬇️ This fixes content going under navbar */}
+          <main className="pt-[60px] min-h-screen">{children}</main>
+
           <Footer />
         </Providers>
 
