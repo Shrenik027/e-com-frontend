@@ -58,7 +58,7 @@ export default function AccountPage() {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
 
-      const res = await API.post("/google", {
+      const res = await API.post("/auth/google", {
         email: user.email,
         name: user.displayName,
       });
