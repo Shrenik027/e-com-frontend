@@ -93,12 +93,13 @@ export default function AccountPage() {
       localStorage.setItem("token", res.token);
       router.push("/");
     } catch (err: any) {
-      setMessage(
+      const msg =
         err.response?.data?.error ||
-          err.response?.data?.message ||
-          "Invalid email or password. Please try again."
-      );
-      setMessageType("error");
+        err.response?.data?.message ||
+        "Invalid email or password.";
+
+      setMessage(msg);
+      setMessageType(msg.includes("verify") ? "info" : "error");
     } finally {
       setLoading(false);
     }
@@ -119,7 +120,9 @@ export default function AccountPage() {
         password: regPassword,
       });
 
-      setMessage("Account created successfully! You can now sign in.");
+      setMessage(
+        "Account created! Please check your email and verify your account before signing in."
+      );
       setMessageType("success");
 
       setName("");
@@ -311,7 +314,7 @@ export default function AccountPage() {
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         type="submit"
-                        disabled={loading}
+                        disabled={loading || message?.includes("verify")}
                         className="w-full bg-gradient-to-r from-[#F59E0B] via-[#F97316] to-[#F59E0B] text-white py-4 px-6 rounded-xl font-semibold hover:shadow-lg hover:shadow-orange-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 group relative overflow-hidden"
                       >
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
