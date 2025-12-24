@@ -27,8 +27,6 @@ import {
   Headphones,
 } from "lucide-react";
 
-import { signInWithPopup } from "firebase/auth";
-import { auth, googleProvider } from "@/components/firebase";
 import API from "@/services/api";
 
 export default function AccountPage() {
@@ -53,23 +51,9 @@ export default function AccountPage() {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
 
-  const handleGoogleLogin = async () => {
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-
-      const res = await API.post("/auth/google", {
-        email: user.email,
-        name: user.displayName,
-      });
-
-      localStorage.setItem("token", res.data.token);
-      router.push("/");
-    } catch (err) {
-      console.error("Google login failed", err);
-      setMessage("Google login failed. Please try again.");
-      setMessageType("error");
-    }
+  const handleGoogleLogin = () => {
+    window.location.href =
+      "https://e-com-production-35ac.up.railway.app/api/v1/auth/google";
   };
 
   /* =========================
