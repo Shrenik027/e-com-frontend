@@ -89,8 +89,12 @@ export default function Navbar() {
                 className="text-2xl font-bold tracking-tight"
                 whileHover={{ scale: 1.05 }}
               >
-                <span className="bg-gradient-brand bg-clip-text text-transparent">
-                  PremiumShop
+                <span className="bg-gradient-brand bg-clip-text text-transparent ">
+                  <img
+                    src="/SHRIX.png"
+                    alt="Shrix Logo"
+                    style={{ height: "140px", width: "auto" }}
+                  />
                 </span>
               </motion.span>
             </Link>

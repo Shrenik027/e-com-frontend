@@ -46,54 +46,17 @@ export default function Footer() {
   return (
     <footer className="bg-background-secondary border-t border-theme text-secondary mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
-        {/* Newsletter Section */}
-        <div className="bg-background-tertiary rounded-2xl p-8 mb-12 border border-theme">
-          <div className="grid lg:grid-cols-2 gap-8 items-center">
-            <div>
-              <h3 className="text-2xl font-bold text-primary mb-3">
-                Join Our Premium Community
-              </h3>
-              <p className="text-muted">
-                Subscribe for exclusive offers, new arrivals, and insider
-                updates delivered to your inbox.
-              </p>
-            </div>
-            <div>
-              <form
-                onSubmit={handleSubscribe}
-                className="flex flex-col sm:flex-row gap-3"
-              >
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="flex-1 px-4 py-3 bg-background border border-theme rounded-lg text-secondary placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
-                  required
-                />
-                <motion.button
-                  type="submit"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="bg-gradient-brand text-black px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
-                >
-                  Subscribe
-                </motion.button>
-              </form>
-              <p className="text-xs text-muted mt-3">
-                By subscribing, you agree to our Privacy Policy. No spam, ever.
-              </p>
-            </div>
-          </div>
-        </div>
-
         {/* Main Footer Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12 mb-12">
           {/* Brand Identity Block */}
           <div className="lg:col-span-2">
-            <Link href="/" className="inline-block mb-4">
-              <span className="text-2xl font-bold bg-gradient-brand bg-clip-text text-transparent">
-                PremiumShop
+            <Link href="/" className="inline-block ">
+              <span className="  ">
+                <img
+                  src="/SHRIX.png"
+                  alt="Shrix Logo"
+                  style={{ height: "140px", width: "auto" }}
+                />
               </span>
             </Link>
 
@@ -136,9 +99,7 @@ export default function Footer() {
                 { label: "All Products", href: "/shop" },
                 { label: "New Arrivals", href: "/new" },
                 { label: "Best Sellers", href: "/best-sellers" },
-                { label: "Premium Collection", href: "/premium" },
                 { label: "Clearance Sale", href: "/sale" },
-                { label: "Gift Cards", href: "/gift-cards" },
               ].map((link) => (
                 <li key={link.href}>
                   <Link
@@ -278,11 +239,11 @@ export default function Footer() {
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                   <a
-                    href="mailto:support@premiumshop.in"
+                    href="mailto:support@shrix.store"
                     className="text-muted hover:text-secondary transition-colors text-sm flex items-center gap-2"
                   >
                     <Mail className="w-4 h-4" />
-                    support@premiumshop.in
+                    support@shrix.store
                   </a>
                   <div className="hidden sm:flex items-center gap-2 text-sm text-muted">
                     <Clock className="w-4 h-4" />
@@ -321,58 +282,11 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Download App Section */}
-        <div className="border-t border-theme mt-8 pt-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div>
-              <h4 className="font-semibold text-primary mb-2 flex items-center gap-2">
-                <Smartphone className="w-5 h-5 text-accent-blue" />
-                Download Our App
-              </h4>
-              <p className="text-sm text-muted">
-                Get the best shopping experience on your mobile device.
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <a
-                href="#"
-                className="flex items-center gap-2 px-4 py-2 bg-background-tertiary rounded-lg border border-theme hover:bg-background-secondary transition-colors"
-              >
-                <div className="w-8 h-8 bg-gradient-brand rounded-lg flex items-center justify-center">
-                  <span className="text-black font-bold">A</span>
-                </div>
-                <div>
-                  <div className="text-xs text-muted">Download on the</div>
-                  <div className="font-semibold text-sm text-secondary">
-                    App Store
-                  </div>
-                </div>
-              </a>
-              <a
-                href="#"
-                className="flex items-center gap-2 px-4 py-2 bg-background-tertiary rounded-lg border border-theme hover:bg-background-secondary transition-colors"
-              >
-                <div className="w-8 h-8 bg-gradient-brand rounded-lg flex items-center justify-center">
-                  <span className="text-black font-bold">P</span>
-                </div>
-                <div>
-                  <div className="text-xs text-muted">Get it on</div>
-                  <div className="font-semibold text-sm text-secondary">
-                    Play Store
-                  </div>
-                </div>
-              </a>
-            </div>
-          </div>
-        </div>
-
         {/* Bottom Legal Bar */}
         <div className="border-t border-theme mt-8 pt-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="text-sm text-muted text-center md:text-left">
-              <p>
-                © {currentYear} PremiumShop India Pvt. Ltd. All rights reserved.
-              </p>
+              <p>© {currentYear} SHRIX India Pvt. Ltd. All rights reserved.</p>
               <p className="mt-1">
                 GSTIN: 27AAECA1234M1Z5 • CIN: U74999MH2022PTC123456 • Mumbai,
                 Maharashtra, India
@@ -421,7 +335,7 @@ export default function Footer() {
             </div>
           </div>
           <p className="text-xs text-muted/70 text-center mt-4 pt-3 border-t border-theme/50">
-            This website is operated by PremiumShop India Pvt. Ltd. Prices are
+            This website is operated by SHRIX India Pvt. Ltd. Prices are
             inclusive of all taxes. Images are for representation only. Product
             specifications may vary.
           </p>
