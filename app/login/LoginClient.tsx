@@ -58,9 +58,13 @@ export default function AccountPage() {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
 
+      if (!user.email) {
+        throw new Error("Google account has no email");
+      }
+
       const res = await API.post("/auth/google", {
         email: user.email,
-        name: user.displayName,
+        name: user.displayName || user.email.split("@")[0],
       });
 
       localStorage.setItem("token", res.data.token);
