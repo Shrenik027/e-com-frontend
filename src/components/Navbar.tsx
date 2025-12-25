@@ -18,9 +18,11 @@ import {
   Tag,
   Sparkles,
   LogOut,
+  Shield,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ThemeSwitcher from "./ThemeSwitcher"; // Import the theme switcher
+import { getAuth, logout } from "@/services/auth";
 
 export default function Navbar() {
   const router = useRouter();
@@ -29,12 +31,8 @@ export default function Navbar() {
   const [accountOpen, setAccountOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  /* ================= AUTH STATE ================= */
-  useEffect(() => {
-    setIsLoggedIn(!!localStorage.getItem("token"));
-  }, [pathname]);
 
   /* ================= SCROLL EFFECT ================= */
   useEffect(() => {
@@ -60,12 +58,19 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    const auth = getAuth();
+
+    setIsLoggedIn(auth.isLoggedIn);
+    setIsAdmin(auth.isAdmin);
+  }, [pathname]);
+
   const { cart } = useCart();
   const cartCount = cart?.items?.length || 0;
 
   /* ================= LOGOUT ================= */
-  const logout = () => {
-    localStorage.removeItem("token");
+  const handleLogou = () => {
+    logout(); // from auth.ts
     setIsLoggedIn(false);
     setAccountOpen(false);
     router.push("/login");
@@ -93,7 +98,7 @@ export default function Navbar() {
                   <img
                     src="/SHRIX.png"
                     alt="Shrix Logo"
-                    style={{ height: "140px", width: "auto" }}
+                    className="h-20 w-auto object-contain"
                   />
                 </span>
               </motion.span>
@@ -231,8 +236,25 @@ export default function Navbar() {
 
                         <div className="border-t border-theme my-2" />
 
+                        {isAdmin && (
+                          <>
+                            <Link
+                              href="/admin"
+                              className="flex items-center gap-3 px-4 py-3 text-secondary hover:bg-background-secondary transition-colors"
+                              onClick={() => setAccountOpen(false)}
+                            >
+                              <Shield className="w-4 h-4" />
+                              <span className="font-medium">
+                                Admin Dashboard
+                              </span>
+                            </Link>
+
+                            <div className="border-t border-theme my-2" />
+                          </>
+                        )}
+
                         <button
-                          onClick={logout}
+                          onClick={handleLogou}
                           className="flex items-center gap-3 w-full px-4 py-3 text-brand hover:bg-background-secondary transition-colors text-left"
                         >
                           <LogOut className="w-4 h-4" />
@@ -370,6 +392,16 @@ export default function Navbar() {
                       <Package className="w-4 h-4" />
                       My Orders
                     </Link>
+                    {isAdmin && (
+                      <Link
+                        href="/admin"
+                        onClick={() => setMobileOpen(false)}
+                        className="flex items-center gap-3 px-4 py-3.5 rounded-lg font-medium text-muted hover:text-secondary hover:bg-background-tertiary transition-all"
+                      >
+                        <Shield className="w-4 h-4" />
+                        Admin Dashboard
+                      </Link>
+                    )}
 
                     <button
                       onClick={() => {

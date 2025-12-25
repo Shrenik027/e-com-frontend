@@ -68,6 +68,8 @@ export default function AccountPage() {
       });
 
       localStorage.setItem("token", res.data.token);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
+
       router.push("/");
     } catch (err) {
       console.error("Google login failed", err);
@@ -90,7 +92,12 @@ export default function AccountPage() {
         password: loginPassword,
       });
 
+      // ✅ STORE BOTH TOKEN + USER
       localStorage.setItem("token", res.token);
+      localStorage.setItem("user", JSON.stringify(res.user));
+
+      router.push("/");
+
       router.push("/");
     } catch (err: any) {
       const msg =
