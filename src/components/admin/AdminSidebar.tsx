@@ -55,7 +55,7 @@ export default function AdminSidebar() {
   const pathname = usePathname();
 
   return (
-    <div className="w-64 h-screen bg-background-secondary border-r border-theme flex flex-col mt-20">
+    <div className="w-64  bg-background-secondary border-r border-theme flex flex-col ">
       {/* Header */}
       <div className="p-5 border-b border-theme">
         <div className="flex items-center gap-3">
