@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
@@ -19,11 +19,12 @@ import {
   Shield,
   CreditCard,
   Loader2,
-  Sparkles,
+  X,
   Info,
 } from "lucide-react";
-import API from "@/services/api";
+import { useRouter } from "next/navigation";
 
+// Services
 import {
   updateCartItem,
   removeCartItem,
@@ -31,129 +32,113 @@ import {
   applyCoupon,
   removeCoupon,
   applyShipping,
+  getCart,
 } from "@/services/cart";
-
-import { useCart } from "@/context/CartContext";
 import { getShippingMethods } from "@/services/shipping";
-import { useRouter } from "next/navigation";
+import { useCart } from "@/context/CartContext";
+
+/**
+ * INDUSTRY GRADE TYPES
+ * Prevents the "Parameter 'i' implicitly has an 'any' type" error
+ */
+interface CartItem {
+  _id: string;
+  name: string;
+  quantity: number;
+  priceAtAdd: number;
+  total: number;
+  product?: {
+    _id: string;
+    stock: number;
+    images: { url: string }[];
+  };
+}
 
 export default function CartPage() {
   const router = useRouter();
-  const { cart, setCart, showToast } = useCart();
+  const { cart, setCart, showToast, refreshCart } = useCart();
 
-  const [loadingItem, setLoadingItem] = useState<string | null>(null);
-  const [removingItemId, setRemovingItemId] = useState<string | null>(null);
-
+  // --- Logic Control States ---
+  const [loadingItems, setLoadingItems] = useState<Record<string, boolean>>({});
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [shippingLoading, setShippingLoading] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [shippingMethods, setShippingMethods] = useState<any[]>([]);
   const [couponCode, setCouponCode] = useState("");
   const [couponError, setCouponError] = useState("");
-  const [couponLoading, setCouponLoading] = useState(false);
 
-  const [shippingMethods, setShippingMethods] = useState<any[]>([]);
-  const [shippingLoading, setShippingLoading] = useState(false);
+  // --- Helpers ---
+  const formatPrice = (num: number) =>
+    new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
+    }).format(num);
 
-  /* ================= LOAD SHIPPING METHODS ================= */
+  // --- Initial Load ---
   useEffect(() => {
+    let isMounted = true;
     getShippingMethods()
-      .then(setShippingMethods)
-      .catch(() => {});
-  }, []);
+      .then((data) => {
+        if (isMounted) setShippingMethods(data);
+      })
+      .catch(() => showToast("Could not load shipping methods", "error"));
+    return () => {
+      isMounted = false;
+    };
+  }, [showToast]);
 
-  if (!cart) {
-    return <div className="p-20 text-center">Loading cart…</div>;
-  }
+  // --- Logic: Parallel-Safe Quantity Update ---
+  const handleUpdateQty = async (item: CartItem, newQty: number) => {
+    if (loadingItems[item._id] || newQty < 1) return;
 
-  if (cart.items.length === 0) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Link href="/shop" className="text-brand font-semibold">
-          Your cart is empty. Start shopping →
-        </Link>
-      </div>
-    );
-  }
+    const stock = item.product?.stock ?? 0;
+    if (newQty > stock) {
+      showToast(`Only ${stock} units remaining`, "error");
+      return;
+    }
 
-  /* ================= QUANTITY ================= */
-
-  const increaseQty = async (item: any) => {
-    if (loadingItem || item.quantity >= item.product?.stock) return;
-
+    setLoadingItems((prev) => ({ ...prev, [item._id]: true }));
     try {
-      setLoadingItem(item._id);
-      const updated = await updateCartItem(item._id, item.quantity + 1);
-      setCart(updated);
-      showToast(`Increased quantity of ${item.name}`, "success");
-    } catch {
-      showToast("Failed to update quantity", "error");
+      const updatedCart = await updateCartItem(item._id, newQty);
+      setCart(updatedCart);
+    } catch (err: any) {
+      showToast(err.response?.data?.error || "Update failed", "error");
     } finally {
-      setLoadingItem(null);
+      setLoadingItems((prev) => ({ ...prev, [item._id]: false }));
     }
   };
 
-  const decreaseQty = async (item: any) => {
-    if (loadingItem) return;
-
+  // --- Logic: Robust Remove ---
+  const handleRemove = async (item: CartItem) => {
+    if (loadingItems[item._id]) return;
+    setLoadingItems((prev) => ({ ...prev, [item._id]: true }));
     try {
-      setLoadingItem(item._id);
-
-      const updated =
-        item.quantity === 1
-          ? await removeCartItem(item._id)
-          : await updateCartItem(item._id, item.quantity - 1);
-
-      setCart(updated);
-      showToast(
-        item.quantity === 1
-          ? `${item.name} removed`
-          : `Decreased quantity of ${item.name}`,
-        "success"
-      );
-    } catch {
-      showToast("Failed to update cart", "error");
-    } finally {
-      setLoadingItem(null);
-    }
-  };
-
-  const handleRemoveItem = async (id: string, name: string) => {
-    if (removingItemId) return;
-
-    try {
-      setRemovingItemId(id);
-      const updated = await removeCartItem(id);
-      setCart(updated);
-      showToast(`Removed ${name}`, "success");
+      const updatedCart = await removeCartItem(item._id);
+      setCart(updatedCart);
+      showToast(`${item.name} removed`, "success");
     } catch {
       showToast("Failed to remove item", "error");
     } finally {
-      setRemovingItemId(null);
+      setLoadingItems((prev) => ({ ...prev, [item._id]: false }));
     }
   };
 
-  const handleClearCart = async () => {
-    if (!confirm("Clear entire cart?")) return;
-    try {
-      const updated = await clearCart();
-      setCart(updated);
-      showToast("Cart cleared", "success");
-    } catch {
-      showToast("Failed to clear cart", "error");
-    }
-  };
-
-  /* ================= COUPON ================= */
-
+  // --- Logic: Coupon Management ---
   const handleApplyCoupon = async () => {
     if (!couponCode.trim() || couponLoading) return;
-
+    setCouponLoading(true);
+    setCouponError("");
     try {
-      setCouponLoading(true);
-      setCouponError("");
-      const updated = await applyCoupon(couponCode.trim());
-      setCart(updated);
+      const updatedCart = await applyCoupon(couponCode.trim());
+      setCart(updatedCart);
       setCouponCode("");
-      showToast("Coupon applied", "success");
+      showToast("Promo applied!", "success");
     } catch (err: any) {
-      const msg = err?.response?.data?.error || "Invalid coupon";
+      const msg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        "Invalid Code";
       setCouponError(msg);
       showToast(msg, "error");
     } finally {
@@ -162,13 +147,11 @@ export default function CartPage() {
   };
 
   const handleRemoveCoupon = async () => {
-    if (couponLoading) return;
-
+    setCouponLoading(true);
     try {
-      setCouponLoading(true);
-      const updated = await removeCoupon();
-      setCart(updated);
-      showToast("Coupon removed", "success");
+      const updatedCart = await removeCoupon();
+      setCart(updatedCart);
+      showToast("Coupon removed", "info");
     } catch {
       showToast("Failed to remove coupon", "error");
     } finally {
@@ -176,166 +159,375 @@ export default function CartPage() {
     }
   };
 
-  /* ================= SHIPPING ================= */
-
-  const handleApplyShipping = async (methodId: string) => {
+  // --- Logic: Shipping ---
+  const handleShipping = async (id: string) => {
     if (shippingLoading) return;
-
+    setShippingLoading(true);
     try {
-      setShippingLoading(true);
-      const updated = await applyShipping(methodId);
-      setCart(updated);
-      const method = shippingMethods.find((m) => m._id === methodId);
-      showToast(`Shipping set to ${method?.name}`, "success");
+      const updatedCart = await applyShipping(id);
+      setCart(updatedCart);
     } catch {
-      showToast("Failed to update shipping", "error");
+      showToast("Error updating shipping", "error");
     } finally {
       setShippingLoading(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* ================= LEFT COLUMN: CART ITEMS ================= */}
-          <div className="lg:col-span-2">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="mb-8"
+  // --- Logic: Freshness Guard Checkout ---
+  const handleCheckout = async () => {
+    if (isNavigating) return;
+    setIsNavigating(true);
+    try {
+      // Step 1: Refresh one last time to ensure stock hasn't changed
+      await refreshCart();
+
+      if (!cart?.shippingMethod) {
+        showToast("Please select a shipping method", "error");
+        setIsNavigating(false);
+        return;
+      }
+
+      router.push("/checkout");
+    } catch {
+      setIsNavigating(false);
+    }
+  };
+
+  // --- Loading/Error States ---
+  if (!cart)
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="min-h-screen flex flex-col items-center justify-center p-6"
+      >
+        <div className="relative">
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[var(--color-primary)]/20 to-[#F97316]/20 flex items-center justify-center">
+            <Loader2 className="w-10 h-10 animate-spin text-[var(--color-primary)]" />
+          </div>
+          <div className="absolute -inset-4 rounded-full border-2 border-[var(--color-primary)]/10 animate-pulse"></div>
+        </div>
+        <p className="mt-6 text-muted font-medium">Loading your cart...</p>
+      </motion.div>
+    );
+
+  if (cart.items.length === 0) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="min-h-screen flex flex-col items-center justify-center p-6 text-center"
+      >
+        {/* Empty Cart Illustration */}
+        <motion.div
+          initial={{ scale: 0.8 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", damping: 15 }}
+          className="relative mb-10"
+        >
+          <div className="w-48 h-48 rounded-[40px] bg-background-secondary flex items-center justify-center shadow-2xl shadow-black/30">
+            <ShoppingBag className="w-24 h-24 text-muted" />
+          </div>
+          <motion.div
+            animate={{
+              scale: [1, 1.1, 1],
+              opacity: [0.3, 0.5, 0.3],
+            }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              repeatType: "reverse",
+            }}
+            className="absolute -inset-8 rounded-[60px] bg-gradient-to-r from-[var(--color-primary)]/10 to-[var(--color-accent-blue)]/10 blur-xl"
+          />
+        </motion.div>
+
+        {/* Empty State Content */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="space-y-4 max-w-md"
+        >
+          <h1 className="text-4xl font-bold text-primary tracking-tight">
+            Your Cart is Empty
+          </h1>
+          <p className="text-lg text-secondary leading-relaxed">
+            Looks like you haven't added any items yet. Start exploring our
+            collection of premium products.
+          </p>
+        </motion.div>
+
+        {/* Action Button */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="mt-12"
+        >
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="relative"
+          >
+            <div className="absolute -inset-4 bg-gradient-to-r from-[var(--color-primary)]/20 to-[#F97316]/20 blur-xl rounded-3xl" />
+            <Link
+              href="/shop"
+              className="relative px-12 py-5 rounded-2xl font-bold text-white text-lg bg-gradient-to-r from-[var(--color-primary)] to-[#F97316] shadow-2xl shadow-[var(--color-primary)]/30 hover:shadow-3xl hover:shadow-[var(--color-primary)]/40 transition-all duration-300 flex items-center gap-4 group"
             >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <ShoppingBag className="w-5 h-5 text-brand" />
-                  <h2 className="text-xl font-bold text-primary">
-                    Cart Items ({cart.items.length})
-                  </h2>
+              <ShoppingBag className="w-6 h-6" />
+              Start Shopping
+              <ArrowRight className="w-5 h-5 transform group-hover:translate-x-2 transition-transform duration-300" />
+            </Link>
+          </motion.div>
+
+          <p className="text-sm text-muted mt-6">
+            Free shipping on orders over ₹999 • 30-day return policy
+          </p>
+        </motion.div>
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4 }}
+      className="min-h-screen bg-background"
+    >
+      {/* Background Gradient Effect */}
+      <div className="fixed inset-0 bg-gradient-to-br from-[var(--color-background)] via-[var(--color-background-secondary)] to-[var(--color-background)] opacity-50 pointer-events-none" />
+
+      {/* Main Container */}
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+        {/* Page Header */}
+        <motion.header
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-10 lg:mb-16"
+        >
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <motion.div whileHover={{ rotate: 5 }} className="relative">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[var(--color-primary)] to-[#F97316] flex items-center justify-center shadow-xl">
+                  <ShoppingCart className="w-7 h-7 text-white" />
                 </div>
-                <button
-                  onClick={handleClearCart}
-                  className="flex items-center gap-2 px-4 py-2 text-sm text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Clear All
-                </button>
+                <div className="absolute -top-2 -right-2 w-7 h-7 bg-[var(--color-accent-green)] rounded-full flex items-center justify-center shadow-lg">
+                  <span className="text-xs font-bold text-white">
+                    {cart.items.length}
+                  </span>
+                </div>
+              </motion.div>
+              <div>
+                <h1 className="text-3xl lg:text-4xl font-bold text-primary">
+                  Shopping Cart
+                </h1>
+                <p className="text-secondary mt-1">
+                  Review your items and proceed to checkout
+                </p>
               </div>
+            </div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="flex items-center gap-4"
+            >
+              <Link
+                href="/shop"
+                className="px-5 py-3 rounded-xl bg-background-secondary border border-theme text-secondary hover:text-primary hover:border-[var(--color-primary)]/30 transition-colors flex items-center gap-3 group"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="font-medium">Continue Shopping</span>
+              </Link>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() =>
+                  confirm("Clear all items from your cart?") &&
+                  clearCart().then(setCart)
+                }
+                className="px-5 py-3 rounded-xl bg-background-secondary border border-theme text-muted hover:text-red-400 hover:border-red-400/30 transition-colors flex items-center gap-3"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span className="font-medium">Clear All</span>
+              </motion.button>
             </motion.div>
+          </div>
+        </motion.header>
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
+          {/* ================= LEFT COLUMN: CART ITEMS ================= */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Cart Items Header */}
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-primary">
+                Items ({cart.items.length})
+              </h2>
+              <div className="text-sm text-muted">
+                Total:{" "}
+                <span className="font-bold text-primary ml-1">
+                  {formatPrice(cart.subtotal)}
+                </span>
+              </div>
+            </div>
 
             {/* Cart Items List */}
-            <div className="space-y-4">
-              <AnimatePresence>
-                {cart.items.map((item: any, index: number) => (
+            <div className="space-y-5">
+              <AnimatePresence mode="popLayout">
+                {cart.items.map((item: CartItem, index: number) => (
                   <motion.div
                     key={item._id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="bg-background-secondary border border-theme rounded-xl overflow-hidden"
+                    layout
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{
+                      duration: 0.3,
+                      delay: index * 0.05,
+                    }}
+                    className="group"
                   >
-                    <div className="p-4 md:p-6">
-                      <div className="flex flex-col md:flex-row gap-4 md:gap-6">
-                        {/* Product Image */}
-                        <div className="relative w-full md:w-32 h-32 md:h-32 flex-shrink-0 bg-background-tertiary rounded-lg overflow-hidden">
-                          <Image
-                            src={
-                              item.product?.images?.[0]?.url ||
-                              "/placeholder.png"
-                            }
-                            alt={item.name}
-                            fill
-                            className="object-cover"
-                            sizes="(max-width: 768px) 100vw, 128px"
-                          />
-                        </div>
+                    {/* Card Container */}
+                    <div className="relative overflow-hidden rounded-3xl">
+                      {/* Gradient Border Effect */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-primary)]/10 via-transparent to-[var(--color-accent-blue)]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-                        {/* Product Details */}
-                        <div className="flex-1">
-                          <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                            <div className="flex-1">
-                              <h3 className="font-semibold text-primary mb-1">
-                                {item.name}
-                              </h3>
-                              <p className="text-sm text-muted mb-3">
-                                ₹{item.priceAtAdd} each
-                              </p>
-
-                              {/* Quantity Controls */}
-                              <div className="flex items-center gap-4">
-                                <div className="flex items-center border border-theme rounded-lg">
-                                  <button
-                                    onClick={() => decreaseQty(item)}
-                                    disabled={
-                                      loadingItem === item._id ||
-                                      item.quantity === 1
-                                    }
-                                    className="p-2 text-muted hover:text-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                  >
-                                    {loadingItem === item._id &&
-                                    item.quantity === 1 ? (
-                                      <Loader2 className="w-3 h-3 animate-spin" />
-                                    ) : (
-                                      <Minus className="w-3 h-3" />
-                                    )}
-                                  </button>
-                                  <span className="w-10 text-center font-semibold text-primary">
-                                    {loadingItem === item._id ? (
-                                      <Loader2 className="w-3 h-3 animate-spin mx-auto" />
-                                    ) : (
-                                      item.quantity
-                                    )}
-                                  </span>
-                                  <button
-                                    onClick={() => increaseQty(item)}
-                                    disabled={
-                                      loadingItem === item._id ||
-                                      item.quantity >= item.product?.stock
-                                    }
-                                    className="p-2 text-muted hover:text-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                  >
-                                    <Plus className="w-3 h-3" />
-                                  </button>
-                                </div>
-
-                                {/* Remove Button */}
-                                <button
-                                  onClick={() =>
-                                    handleRemoveItem(item._id, item.name)
+                      {/* Main Card */}
+                      <div className="relative bg-background-secondary border border-theme p-6 rounded-3xl backdrop-blur-sm">
+                        <div className="flex flex-col sm:flex-row gap-6">
+                          {/* Product Image */}
+                          <motion.div
+                            whileHover={{ scale: 1.02 }}
+                            className="relative flex-shrink-0"
+                          >
+                            <div className="relative w-full sm:w-40 h-40 sm:h-40">
+                              {/* Image Container */}
+                              <div className="absolute inset-0 bg-gradient-to-br from-background-tertiary to-background-secondary rounded-2xl" />
+                              <div className="relative w-full h-full rounded-2xl overflow-hidden border border-theme">
+                                <Image
+                                  src={
+                                    item.product?.images?.[0]?.url ||
+                                    "/placeholder.png"
                                   }
-                                  disabled={removingItemId === item._id}
-                                  className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50"
-                                >
-                                  {removingItemId === item._id ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                  ) : (
-                                    <Trash2 className="w-4 h-4" />
-                                  )}
-                                </button>
+                                  alt={item.name}
+                                  fill
+                                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                                  sizes="(max-width: 640px) 100vw, 160px"
+                                />
                               </div>
 
-                              {/* Stock Warning */}
+                              {/* Stock Badge */}
                               {item.product?.stock &&
-                                item.quantity >= item.product.stock && (
-                                  <div className="flex items-center gap-2 mt-3 px-3 py-1.5 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                                    <AlertCircle className="w-3 h-3 text-yellow-500" />
-                                    <p className="text-xs text-yellow-600">
-                                      Maximum stock reached
-                                    </p>
+                                item.product.stock < 10 && (
+                                  <div className="absolute -top-2 -right-2 px-3 py-1.5 bg-gradient-to-r from-[var(--color-primary)] to-[#F97316] rounded-full shadow-lg">
+                                    <span className="text-xs font-bold text-white">
+                                      Only {item.product.stock} left
+                                    </span>
                                   </div>
                                 )}
                             </div>
+                          </motion.div>
 
-                            {/* Item Total */}
-                            <div className="text-right">
-                              <p className="text-lg font-bold text-primary">
-                                ₹{item.total}
-                              </p>
-                              {item.quantity > 1 && (
-                                <p className="text-xs text-muted">
-                                  ₹{item.priceAtAdd} × {item.quantity}
+                          {/* Product Details */}
+                          <div className="flex-1 min-w-0">
+                            {/* Header Row */}
+                            <div className="flex justify-between items-start mb-4">
+                              <div className="flex-1 min-w-0">
+                                <h3 className="text-xl font-bold text-primary mb-2 truncate">
+                                  {item.name}
+                                </h3>
+                                <div className="flex items-center gap-4 mb-3">
+                                  <span className="text-2xl font-bold bg-gradient-brand bg-clip-text text-transparent">
+                                    {formatPrice(item.priceAtAdd)}
+                                  </span>
+                                  <span className="text-sm text-muted">
+                                    each
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Remove Button */}
+                              <motion.button
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                onClick={() => handleRemove(item)}
+                                disabled={loadingItems[item._id]}
+                                className="flex-shrink-0 p-3 rounded-xl bg-background-tertiary text-muted hover:text-red-400 hover:bg-red-400/10 border border-theme ml-4"
+                                aria-label={`Remove ${item.name}`}
+                              >
+                                {loadingItems[item._id] ? (
+                                  <Loader2 className="w-5 h-5 animate-spin" />
+                                ) : (
+                                  <X className="w-5 h-5" />
+                                )}
+                              </motion.button>
+                            </div>
+
+                            {/* Quantity Controls and Total */}
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mt-6">
+                              {/* Quantity Controls */}
+                              <div className="flex items-center gap-4">
+                                <div className="flex items-center bg-background-tertiary border border-theme rounded-2xl overflow-hidden shadow-inner">
+                                  <motion.button
+                                    whileTap={{ scale: 0.95 }}
+                                    disabled={
+                                      item.quantity <= 1 ||
+                                      loadingItems[item._id]
+                                    }
+                                    onClick={() =>
+                                      handleUpdateQty(item, item.quantity - 1)
+                                    }
+                                    className="p-4 hover:bg-background-secondary disabled:opacity-30 transition-colors"
+                                    aria-label="Decrease quantity"
+                                  >
+                                    <Minus className="w-5 h-5" />
+                                  </motion.button>
+
+                                  <div className="w-16 text-center">
+                                    {loadingItems[item._id] ? (
+                                      <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+                                    ) : (
+                                      <span className="text-lg font-bold text-primary">
+                                        {item.quantity}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <motion.button
+                                    whileTap={{ scale: 0.95 }}
+                                    disabled={
+                                      item.quantity >=
+                                        (item.product?.stock ?? 0) ||
+                                      loadingItems[item._id]
+                                    }
+                                    onClick={() =>
+                                      handleUpdateQty(item, item.quantity + 1)
+                                    }
+                                    className="p-4 hover:bg-background-secondary disabled:opacity-30 transition-colors"
+                                    aria-label="Increase quantity"
+                                  >
+                                    <Plus className="w-5 h-5" />
+                                  </motion.button>
+                                </div>
+
+                                <div className="text-sm text-muted">
+                                  Max: {item.product?.stock ?? 0}
+                                </div>
+                              </div>
+
+                              {/* Total Price */}
+                              <div className="text-right">
+                                <p className="text-sm text-muted mb-2">
+                                  Item Total
                                 </p>
-                              )}
+                                <p className="text-3xl font-bold text-primary">
+                                  {formatPrice(item.total)}
+                                </p>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -345,290 +537,276 @@ export default function CartPage() {
                 ))}
               </AnimatePresence>
             </div>
-
-            {/* Continue Shopping */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-8"
-            >
-              <Link
-                href="/shop"
-                className="flex items-center justify-center gap-2 px-6 py-3 bg-background-tertiary border border-theme rounded-xl text-secondary font-medium hover:bg-background-secondary transition-colors w-full"
-              >
-                <ShoppingCart className="w-5 h-5" />
-                Continue Shopping
-              </Link>
-            </motion.div>
           </div>
 
           {/* ================= RIGHT COLUMN: ORDER SUMMARY ================= */}
           <div className="lg:col-span-1">
-            <div className="sticky top-24 space-y-6">
-              {/* Order Summary Card */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-background-secondary border border-theme rounded-xl p-6"
-              >
-                <h3 className="text-xl font-bold text-primary mb-6">
-                  Order Summary
-                </h3>
-
-                {/* Price Breakdown */}
-                <div className="space-y-3 mb-6">
-                  <div className="flex justify-between items-center">
-                    <span className="text-secondary">
-                      Subtotal ({cart.items.length} items)
-                    </span>
-                    <span className="font-semibold text-primary">
-                      ₹{cart.subtotal}
-                    </span>
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+              className="sticky top-8"
+            >
+              {/* Summary Card */}
+              <div className="bg-background-secondary border border-theme rounded-3xl overflow-hidden shadow-2xl">
+                {/* Card Header */}
+                <div className="p-8 border-b border-theme">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[#F97316] flex items-center justify-center">
+                      <Package className="w-6 h-6 text-white" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-primary">
+                      Order Summary
+                    </h2>
                   </div>
 
-                  {cart.discount > 0 && (
+                  {/* Price Breakdown */}
+                  <div className="space-y-4">
                     <div className="flex justify-between items-center">
-                      <span className="text-secondary">Discount</span>
-                      <span className="font-semibold text-[#22C55E]">
-                        -₹{cart.discount}
+                      <span className="text-secondary">Subtotal</span>
+                      <span className="text-lg font-bold text-primary">
+                        {formatPrice(cart.subtotal)}
                       </span>
                     </div>
-                  )}
 
-                  {/* ✅ CORRECTED: Shipping display - only show after method selected */}
-                  {cart.shippingMethod && (
+                    {/* Discount Display */}
+                    {cart.discount > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        className="overflow-hidden"
+                      >
+                        <div className="flex justify-between items-center py-3 px-4 bg-[var(--color-accent-green)]/10 border border-[var(--color-accent-green)]/20 rounded-xl">
+                          <div className="flex items-center gap-3">
+                            <Tag className="w-4 h-4 text-[var(--color-accent-green)]" />
+                            <span className="text-sm font-bold text-[var(--color-accent-green)]">
+                              Discount Applied
+                            </span>
+                          </div>
+                          <span className="text-lg font-bold text-[var(--color-accent-green)]">
+                            -{formatPrice(cart.discount)}
+                          </span>
+                        </div>
+                      </motion.div>
+                    )}
+
                     <div className="flex justify-between items-center">
                       <span className="text-secondary">Shipping</span>
-                      <span
-                        className={`font-semibold ${
-                          cart.shipping === 0
-                            ? "text-[#22C55E]"
-                            : "text-primary"
-                        }`}
-                      >
-                        {cart.shipping === 0 ? "FREE" : `₹${cart.shipping}`}
+                      <span className="text-lg font-bold text-primary">
+                        {cart.shippingMethod
+                          ? cart.shipping === 0
+                            ? "FREE"
+                            : formatPrice(cart.shipping)
+                          : "—"}
                       </span>
                     </div>
-                  )}
+                  </div>
+                </div>
 
-                  <div className="pt-3 border-t border-theme">
-                    <div className="flex justify-between items-center">
-                      <span className="text-lg font-bold text-primary">
-                        Total
-                      </span>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-brand">
-                          ₹{cart.total}
-                        </div>
-                        <p className="text-xs text-muted mt-1">
-                          Inclusive of all taxes
-                        </p>
-                      </div>
+                {/* Total Section */}
+                <div className="p-8 border-b border-theme">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-sm text-muted mb-1">Total Amount</p>
+                      <p className="text-4xl font-bold bg-gradient-brand bg-clip-text text-transparent">
+                        {formatPrice(cart.total)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-muted">Including all taxes</p>
+                      <p className="text-xs text-muted">
+                        Free shipping over ₹999
+                      </p>
                     </div>
                   </div>
                 </div>
 
                 {/* Coupon Section */}
-                <div className="mb-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Tag className="w-4 h-4 text-brand" />
-                    <h4 className="font-semibold text-primary text-sm">
-                      Have a coupon?
-                    </h4>
-                  </div>
-
-                  {cart.discount ? (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between p-3 bg-[#22C55E]/10 border border-[#22C55E]/20 rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <Check className="w-3 h-3 text-[#22C55E]" />
-                          <span className="text-sm font-medium text-[#22C55E]">
-                            Coupon applied
-                          </span>
+                <div className="p-8 border-b border-theme">
+                  {cart.discount > 0 ? (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="space-y-4"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-[var(--color-accent-green)] flex items-center justify-center">
+                            <Check className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-[var(--color-accent-green)]">
+                              Coupon Applied
+                            </p>
+                            <p className="text-sm text-muted">
+                              You saved {formatPrice(cart.discount)}
+                            </p>
+                          </div>
                         </div>
-                        <button
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
                           onClick={handleRemoveCoupon}
                           disabled={couponLoading}
-                          className="text-sm text-red-500 hover:text-red-600 transition-colors disabled:opacity-50"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <div className="flex gap-2">
-                        <input
-                          value={couponCode}
-                          onChange={(e) => setCouponCode(e.target.value)}
-                          placeholder="Enter coupon code"
-                          className="flex-1 px-3 py-2 bg-background border border-theme rounded-lg text-sm text-secondary placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-brand/30 focus:border-brand transition-all"
-                        />
-                        <button
-                          onClick={handleApplyCoupon}
-                          disabled={couponLoading}
-                          className="px-3 py-2 bg-gradient-to-r from-[#F59E0B] to-[#F97316] text-white font-semibold text-sm rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity"
+                          className="p-2 rounded-lg bg-background-tertiary text-muted hover:text-red-400 hover:bg-red-400/10 border border-theme"
+                          aria-label="Remove coupon"
                         >
                           {couponLoading ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <X className="w-4 h-4" />
+                          )}
+                        </motion.button>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <div className="space-y-3">
+                      <p className="text-sm font-medium text-primary mb-3">
+                        Have a promo code?
+                      </p>
+                      <div className="flex gap-3">
+                        <div className="relative flex-1">
+                          <input
+                            value={couponCode}
+                            onChange={(e) =>
+                              setCouponCode(e.target.value.toUpperCase())
+                            }
+                            placeholder="Enter promo code"
+                            className="w-full bg-background-tertiary border border-theme rounded-2xl px-4 py-3.5 text-primary placeholder:text-muted outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 focus:border-[var(--color-primary)]/30 transition-all"
+                            onKeyDown={(e) =>
+                              e.key === "Enter" && handleApplyCoupon()
+                            }
+                          />
+                          <Tag className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted" />
+                        </div>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={handleApplyCoupon}
+                          disabled={couponLoading || !couponCode}
+                          className="px-6 rounded-2xl bg-gradient-to-r from-[var(--color-primary)] to-[#F97316] text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                        >
+                          {couponLoading ? (
+                            <Loader2 className="w-5 h-5 animate-spin" />
                           ) : (
                             "Apply"
                           )}
-                        </button>
+                        </motion.button>
                       </div>
                       {couponError && (
-                        <p className="text-xs text-red-500 flex items-center gap-1">
-                          <AlertCircle className="w-3 h-3" />
+                        <motion.p
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="text-sm text-red-400 px-2 flex items-center gap-2"
+                        >
+                          <AlertCircle className="w-4 h-4" />
                           {couponError}
-                        </p>
+                        </motion.p>
                       )}
                     </div>
                   )}
                 </div>
 
-                {/* ✅ CORRECTED: Shipping Methods Section */}
-                <div className="mb-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Truck className="w-4 h-4 text-brand" />
-                    <h4 className="font-semibold text-primary text-sm">
-                      Shipping Method
-                    </h4>
-                    {!cart.shippingMethod && (
-                      <span className="text-xs text-red-500 ml-2">
-                        (Required)
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    {shippingMethods.length === 0 ? (
-                      <div className="text-center py-3">
-                        <div className="inline-flex items-center gap-2">
-                          <Loader2 className="w-4 h-4 animate-spin text-muted" />
+                {/* Shipping Methods */}
+                <div className="p-8 border-b border-theme">
+                  <p className="text-sm font-bold text-primary mb-4 flex items-center gap-3">
+                    <Truck className="w-5 h-5 text-[var(--color-accent-blue)]" />
+                    Delivery Options
+                  </p>
+                  <div className="space-y-3">
+                    {shippingMethods.map((method) => (
+                      <motion.button
+                        key={method._id}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        disabled={shippingLoading}
+                        onClick={() => handleShipping(method._id)}
+                        className={`w-full flex justify-between items-center p-4 rounded-2xl border-2 transition-all ${
+                          cart.shippingMethod === method._id
+                            ? "border-[var(--color-primary)] bg-gradient-to-r from-[var(--color-primary)]/10 to-[#F97316]/5"
+                            : "border-theme bg-background-tertiary hover:border-[var(--color-primary)]/40"
+                        }`}
+                      >
+                        <div className="text-left">
+                          <span className="font-bold text-primary block">
+                            {method.name}
+                          </span>
                           <span className="text-sm text-muted">
-                            Loading shipping options...
+                            {method.estimatedDays
+                              ? `${method.estimatedDays} days`
+                              : "Standard"}
                           </span>
                         </div>
-                      </div>
-                    ) : (
-                      shippingMethods.map((method) => (
-                        <div key={method._id} className="relative">
-                          {/* ✅ CORRECTED: Hidden radio input with proper accessibility */}
-                          <input
-                            type="radio"
-                            id={`shipping-${method._id}`}
-                            name="shipping"
-                            checked={cart.shippingMethod === method._id}
-                            onChange={() => handleApplyShipping(method._id)}
-                            disabled={shippingLoading}
-                            className="absolute opacity-0 w-0 h-0"
-                          />
-                          <label
-                            htmlFor={`shipping-${method._id}`}
-                            className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-all ${
-                              cart.shippingMethod === method._id
-                                ? "border-brand bg-brand/5"
-                                : "border-theme hover:border-brand/50"
-                            } ${
-                              shippingLoading
-                                ? "opacity-50 cursor-not-allowed"
-                                : ""
-                            }`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div
-                                className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                                  cart.shippingMethod === method._id
-                                    ? "border-brand bg-brand"
-                                    : "border-theme"
-                                }`}
-                              >
-                                {cart.shippingMethod === method._id && (
-                                  <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
-                                )}
-                              </div>
-                              <div>
-                                <span className="text-sm font-medium text-primary">
-                                  {method.name}
-                                </span>
-                                <p className="text-xs text-muted mt-0.5">
-                                  {method.estimatedDays
-                                    ? `${method.estimatedDays} days`
-                                    : "Standard delivery"}
-                                </p>
-                              </div>
-                            </div>
-                            <span className="font-semibold text-primary">
-                              ₹{method.price}
-                            </span>
-                          </label>
-                          {shippingLoading &&
-                            cart.shippingMethod === method._id && (
-                              <div className="absolute inset-0 bg-background/50 rounded-lg flex items-center justify-center">
-                                <Loader2 className="w-4 h-4 animate-spin text-brand" />
-                              </div>
-                            )}
-                        </div>
-                      ))
-                    )}
+                        <span className="text-lg font-bold text-primary">
+                          {method.price === 0
+                            ? "FREE"
+                            : formatPrice(method.price)}
+                        </span>
+                      </motion.button>
+                    ))}
                   </div>
-
-                  {/* Shipping not selected warning */}
-                  {!cart.shippingMethod && shippingMethods.length > 0 && (
-                    <div className="flex items-center gap-2 mt-2 px-3 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                      <Info className="w-3 h-3 text-yellow-500" />
-                      <p className="text-xs text-yellow-600">
-                        Please select a shipping method to continue
-                      </p>
-                    </div>
-                  )}
                 </div>
 
-                {/* Checkout Button */}
-                <motion.button
-                  whileHover={cart.shippingMethod ? { scale: 1.02 } : {}}
-                  whileTap={cart.shippingMethod ? { scale: 0.98 } : {}}
-                  onClick={() => router.push("/checkout")}
-                  disabled={
-                    !cart.shippingMethod || couponLoading || shippingLoading
-                  }
-                  className={`w-full py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
-                    !cart.shippingMethod
-                      ? "bg-background-tertiary text-muted cursor-not-allowed"
-                      : "bg-gradient-to-r from-[#F59E0B] to-[#F97316] text-white hover:opacity-90"
-                  }`}
-                >
-                  <CreditCard className="w-4 h-4" />
-                  Proceed to Checkout
-                  <ArrowRight className="w-4 h-4" />
-                </motion.button>
-
-                <p className="text-xs text-center text-muted mt-3">
-                  By proceeding, you agree to our Terms & Conditions
-                </p>
-              </motion.div>
-
-              {/* Trust Badges */}
-              <div className="bg-background-secondary border border-theme rounded-xl p-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-background-tertiary rounded-lg">
-                      <Shield className="w-3 h-3 text-[#38BDF8]" />
+                {/* Security & Checkout */}
+                <div className="p-8">
+                  {/* Security Badge */}
+                  <div className="mb-8 p-4 bg-background-tertiary border border-theme rounded-2xl">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--color-accent-blue)] to-[#60A5FA] flex items-center justify-center">
+                        <Shield className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-primary">
+                          Secure Checkout
+                        </p>
+                        <p className="text-xs text-muted">
+                          Your payment is 100% protected
+                        </p>
+                      </div>
                     </div>
-                    <span className="text-xs text-muted">Secure Payment</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-background-tertiary rounded-lg">
-                      <Package className="w-3 h-3 text-[#38BDF8]" />
-                    </div>
-                    <span className="text-xs text-muted">Easy Returns</span>
+
+                  {/* Checkout Button */}
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    disabled={
+                      !cart.shippingMethod ||
+                      isNavigating ||
+                      cart.items.some((i: { product?: any }) => !i.product)
+                    }
+                    onClick={handleCheckout}
+                    className="w-full py-5 rounded-2xl font-bold text-lg bg-gradient-to-r from-[var(--color-primary)] to-[#F97316] text-white shadow-xl shadow-[var(--color-primary)]/20 hover:shadow-2xl hover:shadow-[var(--color-primary)]/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center gap-3 group"
+                  >
+                    {isNavigating ? (
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                    ) : (
+                      <>
+                        <CreditCard className="w-6 h-6" />
+                        Proceed to Checkout
+                        <ArrowRight className="w-5 h-5 transform group-hover:translate-x-2 transition-transform duration-300" />
+                      </>
+                    )}
+                  </motion.button>
+
+                  {/* Additional Info */}
+                  <div className="mt-6 text-center">
+                    <p className="text-xs text-muted">
+                      By proceeding, you agree to our{" "}
+                      <a
+                        href="/terms"
+                        className="text-[var(--color-accent-blue)] hover:underline"
+                      >
+                        Terms & Conditions
+                      </a>
+                    </p>
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
