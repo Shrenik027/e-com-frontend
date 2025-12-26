@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from "framer-motion";
-import AnimatedLogo from "@/components/AnimatedLogo";
 
 export default function HomePage() {
   return (
