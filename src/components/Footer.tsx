@@ -1,356 +1,353 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
-import {
-  Shield,
-  Truck,
-  Headphones,
-  Mail,
-  Clock,
-  MapPin,
-  CreditCard,
-  Package,
-  HelpCircle,
-  FileText,
-  Facebook,
-  Instagram,
-  Twitter,
-  Youtube,
-  ArrowRight,
-  Award,
-  Users,
-  Smartphone,
-  Globe,
-} from "lucide-react";
 import { useEffect, useState } from "react";
+import {
+  HelpCircle,
+  Scale,
+  CreditCard,
+  Mail,
+  ArrowRight,
+  Shield,
+  FileText,
+  RefreshCw,
+  Truck,
+  Package,
+  Cookie,
+  MessageSquare,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function Footer() {
-  const [currentYear, setCurrentYear] = useState<number | null>(null);
-  const [email, setEmail] = useState("");
+  const [year, setYear] = useState<number>();
+  const [expandedSection, setExpandedSection] = useState<string | null>(null);
+
   useEffect(() => {
-    setCurrentYear(new Date().getFullYear());
+    setYear(new Date().getFullYear());
   }, []);
 
-  const handleSubscribe = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (email) {
-      // Handle subscription logic here
-      console.log("Subscribed:", email);
-      setEmail("");
-      // Show success message
-      alert("Thank you for subscribing!");
-    }
+  const toggleSection = (section: string) => {
+    setExpandedSection(expandedSection === section ? null : section);
   };
 
+  const legalLinks = [
+    {
+      label: "Privacy Policy",
+      href: "/privacy-policy",
+      icon: <Shield className="w-4 h-4" />,
+    },
+    {
+      label: "Terms & Conditions",
+      href: "/terms",
+      icon: <FileText className="w-4 h-4" />,
+    },
+    {
+      label: "Refund Policy",
+      href: "/refund-policy",
+      icon: <RefreshCw className="w-4 h-4" />,
+    },
+    {
+      label: "Shipping Policy",
+      href: "/shipping-policy",
+      icon: <Truck className="w-4 h-4" />,
+    },
+    {
+      label: "Return Policy",
+      href: "/return-policy",
+      icon: <Package className="w-4 h-4" />,
+    },
+  ];
+
   return (
-    <footer className="bg-background-secondary border-t border-theme text-secondary mt-auto">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
-        {/* Main Footer Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12 mb-12">
-          {/* Brand Identity Block */}
-          <div className="lg:col-span-2">
-            <Link href="/" className="inline-block ">
-              <span className="  ">
-                <img
-                  src="/SHRIX.png"
-                  alt="Shrix Logo"
-                  style={{ height: "140px", width: "auto" }}
-                />
-              </span>
-            </Link>
-
-            <p className="text-muted mb-6 leading-relaxed max-w-md">
-              Premium products. Global quality. Trusted by thousands of
-              customers across India and beyond.
-            </p>
-
-            <div className="flex flex-wrap items-center gap-6">
-              {[
-                {
-                  icon: <Award className="w-5 h-5" />,
-                  label: "Premium Quality",
-                },
-                {
-                  icon: <Users className="w-5 h-5" />,
-                  label: "10K+ Customers",
-                },
-                { icon: <Shield className="w-5 h-5" />, label: "100% Secure" },
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  className="flex items-center gap-2 text-sm text-muted"
-                >
-                  {item.icon}
-                  <span>{item.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Quick Links */}
-          <div>
-            <h3 className="text-lg font-semibold text-primary mb-4 flex items-center gap-2">
-              <ArrowRight className="w-4 h-4 text-accent-blue" />
-              Shop
-            </h3>
-            <ul className="space-y-3">
-              {[
-                { label: "All Products", href: "/shop" },
-                { label: "New Arrivals", href: "/new" },
-                { label: "Best Sellers", href: "/best-sellers" },
-                { label: "Clearance Sale", href: "/sale" },
-              ].map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="text-muted hover:text-secondary transition-colors inline-flex items-center gap-2 group"
-                  >
-                    <span className="group-hover:translate-x-1 transition-transform">
-                      {link.label}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Help & Support */}
-          <div>
-            <h3 className="text-lg font-semibold text-primary mb-4 flex items-center gap-2">
-              <HelpCircle className="w-4 h-4 text-accent-blue" />
-              Support
-            </h3>
-            <ul className="space-y-3">
-              {[
-                {
-                  label: "Track Your Order",
-                  href: "/track-order",
-                  icon: <Package className="w-3 h-3" />,
-                },
-                {
-                  label: "FAQs",
-                  href: "/faq",
-                  icon: <HelpCircle className="w-3 h-3" />,
-                },
-                {
-                  label: "Contact Us",
-                  href: "/contact",
-                  icon: <Mail className="w-3 h-3" />,
-                },
-                {
-                  label: "Shipping Info",
-                  href: "/shipping",
-                  icon: <Truck className="w-3 h-3" />,
-                },
-                {
-                  label: "Returns & Exchanges",
-                  href: "/returns",
-                  icon: <ArrowRight className="w-3 h-3" />,
-                },
-                {
-                  label: "Size Guide",
-                  href: "/size-guide",
-                  icon: <FileText className="w-3 h-3" />,
-                },
-              ].map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="text-muted hover:text-secondary transition-colors inline-flex items-center gap-2 group"
-                  >
-                    {link.icon}
-                    <span className="group-hover:translate-x-1 transition-transform">
-                      {link.label}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Legal & Policy */}
-          <div>
-            <h3 className="text-lg font-semibold text-primary mb-4 flex items-center gap-2">
-              <Shield className="w-4 h-4 text-accent-blue" />
-              Legal
-            </h3>
-            <ul className="space-y-3">
-              {[
-                { label: "Privacy Policy", href: "/privacy-policy" },
-                { label: "Terms & Conditions", href: "/terms" },
-                { label: "Refund Policy", href: "/refund-policy" },
-                { label: "Shipping Policy", href: "/shipping-policy" },
-                { label: "Return Policy", href: "/return-policy" },
-                { label: "Cookie Policy", href: "/cookie-policy" },
-              ].map((policy) => (
-                <li key={policy.href}>
-                  <Link
-                    href={policy.href}
-                    className="text-muted hover:text-secondary transition-colors text-sm"
-                  >
-                    {policy.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-
-        {/* Payment & Security Section */}
-        <div className="border-t border-theme pt-8">
-          <div className="grid lg:grid-cols-2 gap-8 items-center">
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-                <CreditCard className="w-5 h-5 text-accent-green" />
-                <h4 className="font-semibold text-primary">
-                  Secure Payment Processing
-                </h4>
-              </div>
-              <p className="text-sm text-muted max-w-2xl">
-                All transactions are securely processed through Razorpay with
-                256-bit SSL encryption. We are PCI-DSS compliant and your
-                payment information is never stored.
+    <footer className="bg-background-secondary">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-8 pt-6">
+        {/* Card - Mobile optimized padding */}
+        <div className="bg-background rounded-2xl border border-theme p-4 sm:p-6 md:p-8 lg:p-10">
+          {/* Mobile: Accordion Layout */}
+          <div className="block md:hidden space-y-4">
+            {/* Brand Section - Always visible */}
+            <div className="pb-4 border-b border-theme/30">
+              <img
+                src="/SHRIX.png"
+                alt="Shrix"
+                className="h-8 mb-3"
+                loading="lazy"
+              />
+              <p className="text-sm text-muted leading-relaxed">
+                Curated products designed for modern living. Simple, reliable,
+                and delivered across India.
               </p>
             </div>
 
-            <div>
-              {/* Payment Methods */}
-              <div className="flex flex-wrap items-center gap-3 mb-6">
-                {[
-                  { name: "Visa", icon: "💳" },
-                  { name: "Mastercard", icon: "💳" },
-                  { name: "RuPay", icon: "💳" },
-                  { name: "UPI", icon: "📱" },
-                  { name: "Net Banking", icon: "🏦" },
-                  { name: "Wallet", icon: "👛" },
-                ].map((method) => (
-                  <div
-                    key={method.name}
-                    className="px-3 py-2 bg-background-tertiary rounded-lg text-sm font-medium border border-theme text-muted flex items-center gap-2"
-                  >
-                    <span>{method.icon}</span>
-                    <span>{method.name}</span>
-                  </div>
-                ))}
-              </div>
+            {/* Support Accordion */}
+            <div className="border-b border-theme/30 pb-4">
+              <button
+                onClick={() => toggleSection("support")}
+                className="w-full flex items-center justify-between py-3"
+                aria-expanded={expandedSection === "support"}
+              >
+                <div className="flex items-center gap-2">
+                  <HelpCircle className="w-4 h-4 text-muted" />
+                  <h4 className="text-sm font-semibold text-primary">
+                    Support
+                  </h4>
+                </div>
+                {expandedSection === "support" ? (
+                  <ChevronUp className="w-4 h-4 text-muted" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 text-muted" />
+                )}
+              </button>
 
-              {/* Contact & Social */}
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
+              <AnimatePresence>
+                {expandedSection === "support" && (
+                  <motion.ul
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden space-y-2 pl-6 mt-2"
+                  >
+                    <li>
+                      <Link
+                        href="/faq"
+                        className="group flex items-center gap-2 text-sm text-muted hover:text-secondary py-2"
+                      >
+                        <HelpCircle className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" />
+                        FAQs
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        href="/contact"
+                        className="group flex items-center gap-2 text-sm text-muted hover:text-secondary py-2"
+                      >
+                        <MessageSquare className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" />
+                        Contact Us
+                      </Link>
+                    </li>
+                    <li>
+                      <a
+                        href="mailto:support@shrix.store"
+                        className="group flex items-center gap-2 text-sm text-muted hover:text-secondary py-2"
+                      >
+                        <Mail className="w-4 h-4 group-hover:animate-pulse" />
+                        support@shrix.store
+                      </a>
+                    </li>
+                  </motion.ul>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Legal Accordion */}
+            <div className="border-b border-theme/30 pb-4">
+              <button
+                onClick={() => toggleSection("legal")}
+                className="w-full flex items-center justify-between py-3"
+                aria-expanded={expandedSection === "legal"}
+              >
+                <div className="flex items-center gap-2">
+                  <Scale className="w-4 h-4 text-muted" />
+                  <h4 className="text-sm font-semibold text-primary">Legal</h4>
+                </div>
+                {expandedSection === "legal" ? (
+                  <ChevronUp className="w-4 h-4 text-muted" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 text-muted" />
+                )}
+              </button>
+
+              <AnimatePresence>
+                {expandedSection === "legal" && (
+                  <motion.ul
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden space-y-2 pl-6 mt-2"
+                  >
+                    {legalLinks.map((item) => (
+                      <li key={item.href}>
+                        <Link
+                          href={item.href}
+                          className="group flex items-center gap-2 text-sm text-muted hover:text-secondary py-2"
+                        >
+                          <span className="group-hover:scale-110 transition-transform duration-200">
+                            {item.icon}
+                          </span>
+                          {item.label}
+                        </Link>
+                      </li>
+                    ))}
+                  </motion.ul>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Payments Section */}
+            <div>
+              <div className="flex items-center gap-2 py-3">
+                <CreditCard className="w-4 h-4 text-muted" />
+                <h4 className="text-sm font-semibold text-primary">Payments</h4>
+              </div>
+              <p className="text-sm text-muted leading-relaxed pl-6">
+                Secure checkout powered by{" "}
+                <span className="text-secondary font-medium">Razorpay</span>.
+                Supports UPI, Cards, Net Banking & COD.
+              </p>
+            </div>
+          </div>
+
+          {/* Desktop: Grid Layout */}
+          <div className="hidden md:grid md:grid-cols-4 gap-6 lg:gap-8 xl:gap-10">
+            {/* Brand */}
+            <div className="md:col-span-1">
+              <img
+                src="/SHRIX.png"
+                alt="Shrix"
+                className="h-8 md:h-10 mb-4"
+                loading="lazy"
+              />
+              <p className="text-sm text-muted leading-relaxed max-w-xs">
+                Curated products designed for modern living. Simple, reliable,
+                and delivered across India.
+              </p>
+            </div>
+
+            {/* Support */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <HelpCircle className="w-4 h-4 text-muted" />
+                <h4 className="text-sm font-semibold text-primary">Support</h4>
+              </div>
+              <ul className="space-y-2 text-sm">
+                <li>
+                  <Link
+                    href="/faq"
+                    className="group flex items-center gap-2 text-muted hover:text-secondary transition-all duration-300"
+                  >
+                    <HelpCircle className="w-4 h-4 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-300" />
+                    <span className="group-hover:translate-x-1 transition-transform duration-300">
+                      FAQs
+                    </span>
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/contact"
+                    className="group flex items-center gap-2 text-muted hover:text-secondary transition-all duration-300"
+                  >
+                    <MessageSquare className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
+                    <span className="group-hover:translate-x-1 transition-transform duration-300">
+                      Contact Us
+                    </span>
+                  </Link>
+                </li>
+                <li>
                   <a
                     href="mailto:support@shrix.store"
-                    className="text-muted hover:text-secondary transition-colors text-sm flex items-center gap-2"
+                    className="group flex items-center gap-2 text-muted hover:text-secondary transition-all duration-300"
                   >
-                    <Mail className="w-4 h-4" />
-                    support@shrix.store
+                    <Mail className="w-4 h-4 group-hover:animate-pulse" />
+                    <span className="group-hover:underline decoration-[#F59E0B] decoration-2 underline-offset-2 transition-all duration-300">
+                      support@shrix.store
+                    </span>
                   </a>
-                  <div className="hidden sm:flex items-center gap-2 text-sm text-muted">
-                    <Clock className="w-4 h-4" />
-                    <span>10AM-7PM IST</span>
-                  </div>
-                </div>
+                </li>
+              </ul>
+            </div>
 
-                <div className="flex items-center gap-4">
-                  <span className="text-sm text-muted mr-2">Follow us:</span>
-                  {[
-                    {
-                      icon: <Facebook className="w-5 h-5" />,
-                      label: "Facebook",
-                    },
-                    {
-                      icon: <Instagram className="w-5 h-5" />,
-                      label: "Instagram",
-                    },
-                    { icon: <Twitter className="w-5 h-5" />, label: "Twitter" },
-                    { icon: <Youtube className="w-5 h-5" />, label: "YouTube" },
-                  ].map((social) => (
-                    <motion.a
-                      key={social.label}
-                      href="#"
-                      whileHover={{ scale: 1.1, y: -2 }}
-                      whileTap={{ scale: 0.95 }}
-                      className="text-muted hover:text-secondary hover:bg-background-tertiary p-2 rounded-lg transition-all"
-                      aria-label={social.label}
+            {/* Legal */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <Scale className="w-4 h-4 text-muted" />
+                <h4 className="text-sm font-semibold text-primary">Legal</h4>
+              </div>
+              <ul className="space-y-2 text-sm">
+                {legalLinks.map((item) => (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      className="group flex items-center gap-2 text-muted hover:text-secondary transition-all duration-300"
                     >
-                      {social.icon}
-                    </motion.a>
-                  ))}
+                      <span className="group-hover:scale-110 transition-transform duration-300">
+                        {item.icon}
+                      </span>
+                      <span className="group-hover:translate-x-1 transition-transform duration-300 relative">
+                        {item.label}
+                        <span className="absolute -bottom-1 left-0 w-0 group-hover:w-full h-px bg-gradient-to-r from-[#F59E0B] to-[#F97316] transition-all duration-300" />
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Payments */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <CreditCard className="w-4 h-4 text-muted" />
+                <h4 className="text-sm font-semibold text-primary">Payments</h4>
+              </div>
+              <div className="text-sm text-muted leading-relaxed group">
+                <p className="group-hover:text-secondary transition-colors duration-300">
+                  Secure checkout powered by{" "}
+                  <span className="text-secondary font-medium group-hover:text-[#F59E0B] transition-colors duration-300">
+                    Razorpay
+                  </span>
+                  . Supports UPI, Cards, Net Banking & COD.
+                </p>
+                <div className="mt-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-500">
+                  <div className="w-1 h-1 rounded-full bg-[#F59E0B]" />
+                  <div className="w-1 h-1 rounded-full bg-[#F97316]" />
+                  <div className="w-1 h-1 rounded-full bg-[#38BDF8]" />
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Bottom Legal Bar */}
-        <div className="border-t border-theme mt-8 pt-6">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="text-sm text-muted text-center md:text-left">
-              <p>© {currentYear} SHRIX India Pvt. Ltd. All rights reserved.</p>
-              <p className="mt-1">
-                GSTIN: 27AAECA1234M1Z5 • CIN: U74999MH2022PTC123456 • Mumbai,
-                Maharashtra, India
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-center gap-6">
-              <div className="flex items-center gap-2 text-sm text-muted">
-                <Truck className="w-4 h-4 text-accent-blue" />
-                <span>All India Delivery</span>
-              </div>
-
-              <div className="flex items-center gap-2 text-sm text-muted">
-                <Shield className="w-4 h-4 text-accent-green" />
-                <span>7-Day Returns</span>
-              </div>
-
-              <div className="flex items-center gap-2 text-sm text-muted">
-                <Headphones className="w-4 h-4 text-brand" />
-                <span>24/7 Support</span>
-              </div>
-            </div>
+          {/* Divider - Responsive */}
+          <div className="relative my-6 md:my-8">
+            <div className="h-px bg-gradient-to-r from-transparent via-theme to-transparent" />
+            <div className="absolute left-0 top-1/2 h-1 w-1 md:h-2 md:w-2 -translate-y-1/2 rounded-full bg-gradient-to-r from-[#F59E0B] to-[#F97316] animate-pulse" />
           </div>
-        </div>
 
-        {/* Compliance Notice */}
-        <div className="mt-6 p-4 bg-background-tertiary/50 rounded-lg border border-theme">
-          <div className="grid md:grid-cols-3 gap-4 text-xs text-muted">
-            <div>
-              <div className="font-medium text-secondary mb-1">
-                Authenticity Guarantee
-              </div>
-              <p>All products are 100% authentic with manufacturer warranty.</p>
-            </div>
-            <div>
-              <div className="font-medium text-secondary mb-1">
-                Secure Checkout
-              </div>
-              <p>Your data is protected with bank-level security.</p>
-            </div>
-            <div>
-              <div className="font-medium text-secondary mb-1">
-                Easy Returns
-              </div>
-              <p>Not satisfied? We offer hassle-free returns within 7 days.</p>
-            </div>
-          </div>
-          <p className="text-xs text-muted/70 text-center mt-4 pt-3 border-t border-theme/50">
-            This website is operated by SHRIX India Pvt. Ltd. Prices are
-            inclusive of all taxes. Images are for representation only. Product
-            specifications may vary.
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-4 mt-4 pt-3 border-t border-theme/50">
-            <div className="flex items-center gap-2">
-              <Globe className="w-4 h-4" />
-              <span className="text-xs text-muted">Ships Worldwide</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Shield className="w-4 h-4" />
-              <span className="text-xs text-muted">SSL Secured</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Award className="w-4 h-4" />
-              <span className="text-xs text-muted">Verified Seller</span>
+          {/* Bottom Section - Stack on mobile, row on desktop */}
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted">
+            <p className="group hover:text-secondary transition-colors duration-300 text-center md:text-left">
+              © {year} Shrix. All rights reserved.
+            </p>
+
+            <div className="flex flex-wrap justify-center items-center gap-3 md:gap-6">
+              <Link
+                href="/privacy-policy"
+                className="group flex items-center gap-1 text-muted hover:text-secondary transition-all duration-300 px-2 py-1"
+              >
+                <Shield className="w-3 h-3 group-hover:animate-bounce" />
+                <span className="group-hover:underline decoration-[#38BDF8] underline-offset-2">
+                  Privacy
+                </span>
+              </Link>
+              <Link
+                href="/terms"
+                className="group flex items-center gap-1 text-muted hover:text-secondary transition-all duration-300 px-2 py-1"
+              >
+                <FileText className="w-3 h-3 group-hover:rotate-12 transition-transform duration-300" />
+                <span className="group-hover:underline decoration-[#22C55E] underline-offset-2">
+                  Terms
+                </span>
+              </Link>
+              <Link
+                href="/cookie-policy"
+                className="group flex items-center gap-1 text-muted hover:text-secondary transition-all duration-300 px-2 py-1"
+              >
+                <Cookie className="w-3 h-3 group-hover:scale-110 transition-transform duration-300" />
+                <span className="group-hover:underline decoration-[#F59E0B] underline-offset-2">
+                  Cookies
+                </span>
+                <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform duration-300 hidden md:inline" />
+              </Link>
             </div>
           </div>
         </div>

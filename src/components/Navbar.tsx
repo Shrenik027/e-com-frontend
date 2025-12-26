@@ -98,7 +98,7 @@ export default function Navbar() {
                   <img
                     src="/SHRIX.png"
                     alt="Shrix Logo"
-                    className="h-20 w-auto object-contain"
+                    className="h-10 w-auto object-contain"
                   />
                 </span>
               </motion.span>
