@@ -1325,7 +1325,9 @@ export default function ProductPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Back Button - Mobile Only */}
-      <div className="lg:hidden sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-theme">
+      {/* Back Button - Mobile Only */}
+      {/* Back Button - Mobile Only */}
+      <div className="lg:hidden bg-background border-b border-theme">
         <div className="container mx-auto px-4 py-3">
           <button
             onClick={() => router.back()}
