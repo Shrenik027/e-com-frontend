@@ -75,6 +75,12 @@ export default function AdminLayout({
 
   return (
     <div className="min-h-screen bg-background text-secondary">
+      <style jsx global>{`
+        footer {
+          display: none;
+        }
+      `}</style>
+
       {/* Mobile Sidebar Overlay */}
       {isMobileMenuOpen && (
         <div
@@ -84,7 +90,7 @@ export default function AdminLayout({
       )}
 
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:block fixed inset-y-0 left-0 z-30 w-64 bg-background-secondary border-r border-theme">
+      <aside className="hidden lg:block fixed inset-y-0 left-0 z-30 w-64 bg-background-secondary border-r border-theme pt-20">
         <AdminSidebar />
       </aside>
 
