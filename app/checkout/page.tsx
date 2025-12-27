@@ -145,6 +145,7 @@ export default function CheckoutPage() {
 
     if (!cart.shippingMethod)
       return showToast("Please pick a delivery speed", "error");
+
     if (!/^[6-9]\d{9}$/.test(phone))
       return showToast("Invalid 10-digit mobile number", "error");
 
@@ -152,8 +153,6 @@ export default function CheckoutPage() {
     setLoading(true);
 
     try {
-      await refreshCart();
-
       const orderRes = await API.post("/orders", {
         address: {
           street: selectedAddress.street,
@@ -164,18 +163,21 @@ export default function CheckoutPage() {
         phone,
         paymentMethod,
       });
+
       const order = orderRes.data.order;
 
+      // ✅ COD FLOW
       if (paymentMethod === "cod") {
-        isSuccessRedirecting.current = true;
         await refreshCart();
         router.replace(`/order-success/${order._id}`);
         return;
       }
 
+      // ✅ ONLINE PAYMENT FLOW
       const paymentRes = await API.post("/payments/create", {
         orderId: order._id,
       });
+
       const { razorpayOrder } = paymentRes.data;
 
       const options = {
@@ -185,14 +187,17 @@ export default function CheckoutPage() {
         order_id: razorpayOrder.id,
         name: "Shrix Store",
         prefill: { contact: phone },
-        theme: { color: "#000000" }, // Customize to your brand
+        theme: { color: "#f59e0b" },
         handler: async (response: any) => {
+          if (isSuccessRedirecting.current) return;
+
           try {
-            await API.post("/payments/verify", response);
             isSuccessRedirecting.current = true;
+            await API.post("/payments/verify", response);
             await refreshCart();
             router.replace(`/order-success/${order._id}`);
           } catch {
+            isSuccessRedirecting.current = false;
             showToast("Payment verification failed", "error");
             setLoading(false);
             placingOrderRef.current = false;
@@ -201,7 +206,6 @@ export default function CheckoutPage() {
         modal: {
           ondismiss: async () => {
             placingOrderRef.current = false;
-            await refreshCart();
             setLoading(false);
             showToast("Payment Cancelled", "info");
           },
